@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const generateToken = require('../../utils/generateToken');
+const generateToken = require('../../util/jwt');
 const pool = require('../../config/db');
 
 const login = async(req, res) => {

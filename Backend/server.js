@@ -10,6 +10,9 @@ const app = express();
 
 app.use(express.json()); // middleware to parse incoming JSON requests
 
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/rooms', require('./routes/roomsRoutes'));
+
 const port = process.env.PORT || 3000;
 
 async function initDb() {

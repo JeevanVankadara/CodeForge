@@ -7,13 +7,12 @@ const UserTable =
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
 
-//Need to implement the nanoId thing
-const RoomsTable = 
-  `CREATE TABLE IF NOT EXISTS rooms(  
-    id INT AUTO_INCREMENT PRIMARY KEY,  
+const RoomsTable =
+  `CREATE TABLE IF NOT EXISTS rooms(
+    id VARCHAR(21) PRIMARY KEY,
     user_created INT NOT NULL,
-    user1 INT NOT NULL,
-    user2 INT NOT NULL,
+    user1 INT NULL,
+    user2 INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_created) REFERENCES users(id),
     FOREIGN KEY (user1) REFERENCES users(id),
