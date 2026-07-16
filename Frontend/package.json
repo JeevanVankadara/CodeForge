@@ -12,8 +12,10 @@
   "dependencies": {
     "@chakra-ui/react": "^3.36.0",
     "@monaco-editor/react": "^4.7.0",
+    "axios": "^1.18.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-toastify": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
