@@ -12,6 +12,7 @@ app.use(express.json()); // middleware to parse incoming JSON requests
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/rooms', require('./routes/roomsRoutes'));
+app.use('/run', require('./routes/runRoutes'));
 
 const port = process.env.PORT || 3000;
 
