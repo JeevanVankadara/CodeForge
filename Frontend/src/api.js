@@ -1,20 +1,22 @@
 import axios from 'axios';
-import { LANGUAGE_VERSIONS } from './constants.js';
 
 const api = axios.create({
-  baseURL: 'https://emkc.org/api/v2/piston'
+  baseURL: 'http://localhost:3000'
 });
 
-export const executeCode = async(language, code) => {
-  const response = await api.post('/execute', {
-    "language": language,
-    "version": LANGUAGE_VERSIONS[language],
-    "files": [
-      {
-        "content": code
-      }
-    ]
+export const executeCode = async (language, code) => {
+  const response = await api.post('/run', {
+    language,
+    code,
   });
 
-  return response.data;
-}
+  // Backend returns { output, error, exitCode }.
+  // Reshape it to the { run: { output, stderr } } form Output.jsx already expects.
+  const data = response.data;
+  return {
+    run: {
+      output: (data.output || '') + (data.error || ''),
+      stderr: data.error || '',
+    },
+  };
+};
