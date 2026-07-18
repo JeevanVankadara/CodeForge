@@ -1,6 +1,6 @@
-const Cpp = require('./languages/Cpp');
-const Python = require('./languages/Python');
-const Java = require('./languages/Java');
+const Cpp = require('./languages/cpp');
+const Python = require('./languages/python');
+const Java = require('./languages/java');
 
 const registry = {
   cpp: Cpp,

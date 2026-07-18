@@ -4,10 +4,11 @@ const api = axios.create({
   baseURL: 'http://localhost:3000'
 });
 
-export const executeCode = async (language, code) => {
+export const executeCode = async (language, code, input = '') => {
   const response = await api.post('/run', {
     language,
     code,
+    input,
   });
 
   // Backend returns { output, error, exitCode }.

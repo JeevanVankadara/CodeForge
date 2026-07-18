@@ -3,11 +3,12 @@ const { spawn } = require("child_process");
 
 const TIMEOUT_MS = 10000; //may change after implementing bullMq;
 
-function runInContainer(runner, jobDir) {
+function runInContainer(runner, jobDir, input = "") {
   return new Promise((resolve) => {
     const args = [
       "run",
       "--rm",
+      "-i", 
       "--network",
       "none",
       "--memory",
@@ -28,6 +29,9 @@ function runInContainer(runner, jobDir) {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+
+    container.stdin.write(input);
+    container.stdin.end();
 
     container.stdout.on("data", (chunk) => {
       stdout += chunk.toString();

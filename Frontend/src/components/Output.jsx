@@ -1,9 +1,10 @@
-import { Box, Text, Button } from '@chakra-ui/react'
+import { Box, Text, Button, Textarea } from '@chakra-ui/react'
 import { useState } from 'react'
 import { toast, Bounce } from 'react-toastify'
 import { executeCode } from '../api.js'
 
 const Output = ({ editorRef, language }) => {
+  const [input, setInput] = useState('')
   const [output, setOutput] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isError, setError] = useState(false)
@@ -30,7 +31,7 @@ const Output = ({ editorRef, language }) => {
 
     try {
       setIsLoading(true)
-      const result = await executeCode(language, sourceCode)
+      const result = await executeCode(language, sourceCode, input)
       setOutput(result.run.output.split('\n'))
       setError(Boolean(result.run.stderr))
     } catch (err) {
@@ -43,37 +44,72 @@ const Output = ({ editorRef, language }) => {
 
   return (
     <Box w={{ base: '100%', md: '50%' }}>
-      <Text mb={2} fontSize="lg">
-        Output
-      </Text>
+      {/* Run button */}
       <Button
-        variant="outline"
         mb={4}
         onClick={runCode}
         loading={isLoading}
-        bg="#110c1b"
-        color="green.300"
-        borderColor="green.600"
-        _hover={{ bg: "green.950", borderColor: "green.400", color: "green.200" }}
-        _active={{ bg: "green.950" }}
+        bg="blue.500"
+        color="white"
+        _hover={{ bg: 'blue.600' }}
+        _active={{ bg: 'blue.700' }}
       >
-        Run Code
+        Run
       </Button>
+
+      {/* Input box (stdin) — scrolls when the text is longer than the box */}
+      <Textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Enter Input here"
+        height="140px"
+        resize="none"
+        overflowY="auto"
+        fontFamily="mono"
+        fontSize="sm"
+        bg="#110c1b"
+        color="gray.200"
+        border="1px solid"
+        borderColor="gray.700"
+        borderRadius={6}
+        _placeholder={{ color: 'gray.500' }}
+        _focus={{ borderColor: 'blue.400', boxShadow: 'none' }}
+      />
+
+      {/* Helper line */}
       <Box
-        height={{ base: '50vh', md: '75vh' }}
+        mt={3}
+        mb={4}
+        p={3}
+        bg="#1a1625"
+        borderRadius={6}
+      >
+        <Text fontSize="sm" color="gray.300">
+          If your code takes input, add it in the above box before running.
+        </Text>
+      </Box>
+
+      {/* Output heading */}
+      <Text mb={2} fontSize="lg" fontWeight="semibold">
+        Output
+      </Text>
+
+      {/* Output console — scrolls when the output is longer than the box */}
+      <Box
+        height={{ base: '40vh', md: '45vh' }}
         p={2}
         overflow="auto"
         fontFamily="mono"
         fontSize="sm"
         border="1px solid"
-        borderRadius={4}
+        borderRadius={6}
         color={isError ? 'red.400' : 'gray.300'}
         borderColor={isError ? 'red.500' : 'gray.700'}
       >
         {output ? (
           output.map((line, index) => <Text key={index}>{line}</Text>)
         ) : (
-          <Text color="gray.500">Click "Run Code" to see the output here</Text>
+          <Text color="gray.500">Click "Run" to see the output here</Text>
         )}
       </Box>
     </Box>

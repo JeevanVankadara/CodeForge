@@ -5,7 +5,7 @@ const runInContainer = require('../services/CodeRunner');
 const {randomUUID} = require('crypto');
 
 const runController = async(req, res) => {
-  const {language, code} = req.body;
+  const {language, code, input = ''} = req.body;
   if(!language || !code || typeof code !== 'string') {
     return res.status(400).json({error: 'Invalid request body'});
   }
@@ -25,7 +25,7 @@ const runController = async(req, res) => {
     await fs.writeFile(path.join(jobDir, runner.fileName), code);
 
     // Run it in Docker and capture the output.
-    const result = await runInContainer(runner, jobDir);
+    const result = await runInContainer(runner, jobDir, input);
 
     return res.status(200).json({
       output: result.stdout,
