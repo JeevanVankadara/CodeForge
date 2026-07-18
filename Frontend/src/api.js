@@ -12,12 +12,11 @@ export const executeCode = async (language, code, input = '') => {
   });
 
   // Backend returns { output, error, exitCode }.
-  // Reshape it to the { run: { output, stderr } } form Output.jsx already expects.
+  // Keep stdout and stderr as SEPARATE fields so the UI can style them differently.
   const data = response.data;
   return {
-    run: {
-      output: (data.output || '') + (data.error || ''),
-      stderr: data.error || '',
-    },
+    stdout: data.output || '',
+    stderr: data.error || '',
+    exitCode: data.exitCode,
   };
 };

@@ -5,9 +5,10 @@ import { executeCode } from '../api.js'
 
 const Output = ({ editorRef, language }) => {
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState(null)
+  const [stdout, setStdout] = useState('')
+  const [stderr, setStderr] = useState('')
+  const [hasRun, setHasRun] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isError, setError] = useState(false)
 
   const notifyError = (message) => {
     toast.error(message, {
@@ -32,10 +33,10 @@ const Output = ({ editorRef, language }) => {
     try {
       setIsLoading(true)
       const result = await executeCode(language, sourceCode, input)
-      setOutput(result.run.output.split('\n'))
-      setError(Boolean(result.run.stderr))
+      setStdout(result.stdout)
+      setStderr(result.stderr)
+      setHasRun(true)
     } catch (err) {
-      setError(true)
       notifyError(err.response?.data?.message || err.message)
     } finally {
       setIsLoading(false)
@@ -94,7 +95,8 @@ const Output = ({ editorRef, language }) => {
         Output
       </Text>
 
-      {/* Output console — scrolls when the output is longer than the box */}
+      {/* Output console — scrolls when the output is longer than the box.
+          stdout lines are gray, stderr lines are red. */}
       <Box
         height={{ base: '40vh', md: '45vh' }}
         p={2}
@@ -103,11 +105,21 @@ const Output = ({ editorRef, language }) => {
         fontSize="sm"
         border="1px solid"
         borderRadius={6}
-        color={isError ? 'red.400' : 'gray.300'}
-        borderColor={isError ? 'red.500' : 'gray.700'}
+        borderColor={stderr ? 'red.500' : 'gray.700'}
       >
-        {output ? (
-          output.map((line, index) => <Text key={index}>{line}</Text>)
+        {hasRun ? (
+          <>
+            {stdout.split('\n').map((line, index) => (
+              <Text key={`out-${index}`} color="gray.300">
+                {line}
+              </Text>
+            ))}
+            {stderr.split('\n').map((line, index) => (
+              <Text key={`err-${index}`} color="red.400">
+                {line}
+              </Text>
+            ))}
+          </>
         ) : (
           <Text color="gray.500">Click "Run" to see the output here</Text>
         )}
