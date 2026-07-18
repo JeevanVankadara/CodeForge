@@ -22,9 +22,30 @@ app.use('/run', require('./routes/runRoutes'));
 
 const port = process.env.PORT || 3000;
 
+// Adds a column only if it is missing, so existing tables get upgraded safely.
+// (Plain "CREATE TABLE IF NOT EXISTS" never alters a table that already exists.)
+async function ensureColumn(table, column, definition) {
+  const [rows] = await pool.promise().query(
+    `SELECT COUNT(*) AS c FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+    [table, column]
+  );
+  if (rows[0].c === 0) {
+    await pool.promise().query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`Migration: added column ${table}.${column}`);
+  }
+}
+
 async function initDb() {
   await pool.promise().query(UserTable);
   await pool.promise().query(RoomsTable);
+
+  // Upgrade older rooms tables that predate these columns.
+  await ensureColumn('rooms', 'language', "VARCHAR(20) NOT NULL DEFAULT 'cpp'");
+  await ensureColumn('rooms', 'code', "TEXT NULL");
+  await ensureColumn('rooms', 'updated_at',
+    "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
   console.log('Database tables are ready');
 }
 

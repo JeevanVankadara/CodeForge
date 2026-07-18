@@ -5,13 +5,15 @@ const assigningUserToLink = (req, res, next) => {
   const userId = req.user.id;
   const linkId = createId();
   pool.query(
-    `INSERT INTO rooms (user_created, id) VALUES (?, ?)`, [userId, linkId], (err, result) => {
+    `INSERT INTO rooms (id, user_created, language, code) VALUES (?, ?, 'cpp', '')`,
+    [linkId, userId],
+    (err, result) => {
       if (err) {
         console.error('Error inserting into rooms table:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
-      return res.status(201).json({ linkId });  
-  });
+      return res.status(201).json({ linkId });
+    });
 };
 
 module.exports = assigningUserToLink;

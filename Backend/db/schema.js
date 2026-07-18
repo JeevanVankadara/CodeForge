@@ -13,7 +13,10 @@ const RoomsTable =
     user_created INT NOT NULL,
     user1 INT NULL,
     user2 INT NULL,
+    language VARCHAR(20) NOT NULL DEFAULT 'cpp',
+    code TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_created) REFERENCES users(id),
     FOREIGN KEY (user1) REFERENCES users(id),
     FOREIGN KEY (user2) REFERENCES users(id)
