@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useParams } from 'react-router-dom'
 import { Box } from '@chakra-ui/react'
 import { ToastContainer } from 'react-toastify'
 import CodeEditor from './components/codeEditor.jsx'
@@ -6,19 +6,37 @@ import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 
-// The existing Chakra-based editor. Reused as-is for both the collab room and
-// the online compiler — its internals are unchanged (re-theme comes later).
-function EditorRoute() {
+// Dark shell matching the Code Canvas theme.
+function EditorShell({ children }) {
   return (
     <Box
       minH="100vh"
-      bg="#0f0a19"
-      color="gray.300"
+      bg="#000"
+      color="#e6e6ea"
       px={{ base: 4, md: 6 }}
-      py={{ base: 4, md: 8 }}
+      py={{ base: 4, md: 6 }}
     >
-      <CodeEditor />
+      {children}
     </Box>
+  )
+}
+
+// Collab room: has a roomId -> Save button + persistence.
+function RoomEditor() {
+  const { roomId } = useParams()
+  return (
+    <EditorShell>
+      <CodeEditor roomId={roomId} />
+    </EditorShell>
+  )
+}
+
+// Plain online compiler: no room, no Save.
+function CompilerEditor() {
+  return (
+    <EditorShell>
+      <CodeEditor />
+    </EditorShell>
   )
 }
 
@@ -29,9 +47,8 @@ const App = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        {/* Same editor for collab room + online compiler. */}
-        <Route path="/room/:roomId" element={<EditorRoute />} />
-        <Route path="/compiler" element={<EditorRoute />} />
+        <Route path="/room/:roomId" element={<RoomEditor />} />
+        <Route path="/compiler" element={<CompilerEditor />} />
       </Routes>
       <ToastContainer />
     </>

@@ -50,10 +50,10 @@ const Output = ({ editorRef, language }) => {
         mb={4}
         onClick={runCode}
         loading={isLoading}
-        bg="blue.500"
+        bg="#3b82f6"
         color="white"
-        _hover={{ bg: 'blue.600' }}
-        _active={{ bg: 'blue.700' }}
+        _hover={{ bg: '#2563eb' }}
+        _active={{ bg: '#1d4ed8' }}
       >
         Run
       </Button>
@@ -68,13 +68,13 @@ const Output = ({ editorRef, language }) => {
         overflowY="auto"
         fontFamily="mono"
         fontSize="sm"
-        bg="#110c1b"
-        color="gray.200"
+        bg="#0b0b0e"
+        color="#e6e6ea"
         border="1px solid"
-        borderColor="gray.700"
-        borderRadius={6}
-        _placeholder={{ color: 'gray.500' }}
-        _focus={{ borderColor: 'blue.400', boxShadow: 'none' }}
+        borderColor="#1e1e22"
+        borderRadius={8}
+        _placeholder={{ color: '#8a8a93' }}
+        _focus={{ borderColor: '#3b82f6', boxShadow: 'none' }}
       />
 
       {/* Helper line */}
@@ -82,46 +82,49 @@ const Output = ({ editorRef, language }) => {
         mt={3}
         mb={4}
         p={3}
-        bg="#1a1625"
-        borderRadius={6}
+        bg="#111114"
+        border="1px solid"
+        borderColor="#1e1e22"
+        borderRadius={8}
       >
-        <Text fontSize="sm" color="gray.300">
+        <Text fontSize="sm" color="#8a8a93">
           If your code takes input, add it in the above box before running.
         </Text>
       </Box>
 
       {/* Output heading */}
-      <Text mb={2} fontSize="lg" fontWeight="semibold">
+      <Text mb={2} fontSize="lg" fontWeight="semibold" color="#e6e6ea">
         Output
       </Text>
 
       {/* Output console — scrolls when the output is longer than the box.
-          stdout lines are gray, stderr lines are red. */}
+          stdout lines are light, stderr lines are red. */}
       <Box
         height={{ base: '40vh', md: '45vh' }}
-        p={2}
+        p={3}
         overflow="auto"
         fontFamily="mono"
         fontSize="sm"
+        bg="#0b0b0e"
         border="1px solid"
-        borderRadius={6}
-        borderColor={stderr ? 'red.500' : 'gray.700'}
+        borderRadius={8}
+        borderColor={stderr ? '#ef4444' : '#1e1e22'}
       >
         {hasRun ? (
           <>
             {stdout.split('\n').map((line, index) => (
-              <Text key={`out-${index}`} color="gray.300">
+              <Text key={`out-${index}`} color="#c9c9d0">
                 {line}
               </Text>
             ))}
             {stderr.split('\n').map((line, index) => (
-              <Text key={`err-${index}`} color="red.400">
+              <Text key={`err-${index}`} color="#f87171">
                 {line}
               </Text>
             ))}
           </>
         ) : (
-          <Text color="gray.500">Click "Run" to see the output here</Text>
+          <Text color="#8a8a93">Click "Run" to see the output here</Text>
         )}
       </Box>
     </Box>

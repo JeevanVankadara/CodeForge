@@ -2,12 +2,12 @@ import { Menu, Button, Portal, Box, Text } from "@chakra-ui/react";
 import { LANGUAGE_VERSIONS } from "../constants.js";
 
 const languages = Object.entries(LANGUAGE_VERSIONS);
-const ACTIVE_COLOR = "blue.300";
+const ACTIVE_COLOR = "#3b82f6";
 
 function LanguageSelector({ language, onSelect }) {
   return (
     <Box mb={4}>
-      <Text mb={2} fontSize="lg" color="gray.300">
+      <Text mb={2} fontSize="lg" color="#8a8a93">
         Language:
       </Text>
       <Menu.Root>
@@ -15,31 +15,31 @@ function LanguageSelector({ language, onSelect }) {
           <Button
             variant="outline"
             size="sm"
-            bg="#110c1b"
-            color="gray.100"
-            borderColor="gray.700"
-            _hover={{ bg: "gray.800", borderColor: "gray.600" }}
-            _active={{ bg: "gray.800" }}
-            _open={{ bg: "gray.800", color: "white", borderColor: ACTIVE_COLOR }}
+            bg="#0b0b0e"
+            color="#e6e6ea"
+            borderColor="#1e1e22"
+            _hover={{ bg: "#1a1a1f", borderColor: "#2a2a30" }}
+            _active={{ bg: "#1a1a1f" }}
+            _open={{ bg: "#1a1a1f", color: "white", borderColor: ACTIVE_COLOR }}
           >
             {language}
           </Button>
         </Menu.Trigger>
         <Portal>
           <Menu.Positioner>
-            <Menu.Content bg="#110c1b" borderColor="gray.700" borderWidth="1px">
+            <Menu.Content bg="#0b0b0e" borderColor="#1e1e22" borderWidth="1px">
               {languages.map(([lang, version]) => (
                 <Menu.Item
                   key={lang}
                   value={lang}
-                  color={lang === language ? ACTIVE_COLOR : "gray.300"}
-                  bg={lang === language ? "gray.800" : "transparent"}
-                  _hover={{ color: ACTIVE_COLOR, bg: "gray.800" }}
-                  _highlighted={{ color: ACTIVE_COLOR, bg: "gray.800" }}
+                  color={lang === language ? ACTIVE_COLOR : "#c9c9d0"}
+                  bg={lang === language ? "#1a1a1f" : "transparent"}
+                  _hover={{ color: ACTIVE_COLOR, bg: "#1a1a1f" }}
+                  _highlighted={{ color: ACTIVE_COLOR, bg: "#1a1a1f" }}
                   onClick={() => onSelect(lang)}
                 >
                   {lang}
-                  <Text as="span" color="gray.500" fontSize="sm" ml={2}>
+                  <Text as="span" color="#8a8a93" fontSize="sm" ml={2}>
                     {version}
                   </Text>
                 </Menu.Item>
