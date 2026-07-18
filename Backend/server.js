@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors({
 }));
 
 app.use(express.json()); // middleware to parse incoming JSON requests
+app.use(cookieParser()); // reads cookies into req.cookies (e.g. the auth token)
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/rooms', require('./routes/roomsRoutes'));

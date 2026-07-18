@@ -1,8 +1,14 @@
+import { Routes, Route } from 'react-router-dom'
 import { Box } from '@chakra-ui/react'
 import { ToastContainer } from 'react-toastify'
 import CodeEditor from './components/codeEditor.jsx'
+import HomePage from './pages/HomePage.jsx'
+import LoginPage from './pages/LoginPage.jsx'
+import SignupPage from './pages/SignupPage.jsx'
 
-const App = () => {
+// The existing Chakra-based editor. Reused as-is for both the collab room and
+// the online compiler — its internals are unchanged (re-theme comes later).
+function EditorRoute() {
   return (
     <Box
       minH="100vh"
@@ -12,8 +18,23 @@ const App = () => {
       py={{ base: 4, md: 8 }}
     >
       <CodeEditor />
-      <ToastContainer />
     </Box>
+  )
+}
+
+const App = () => {
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        {/* Same editor for collab room + online compiler. */}
+        <Route path="/room/:roomId" element={<EditorRoute />} />
+        <Route path="/compiler" element={<EditorRoute />} />
+      </Routes>
+      <ToastContainer />
+    </>
   )
 }
 

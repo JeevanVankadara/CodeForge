@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const generateToken = require('../../util/jwt');
+const { setAuthCookie } = require('../../util/authCookie');
 const pool = require('../../config/db');
 
 const signup = async(req, res) => {
@@ -23,7 +24,8 @@ const signup = async(req, res) => {
         return res.status(500).json({message: 'Database error', error: err});
       }
       const token = generateToken({id: result.insertId, email});
-      res.status(201).json({message: 'User created successfully', token});
+      setAuthCookie(res, token); // store JWT in an HttpOnly cookie
+      res.status(201).json({message: 'User created successfully'});
     });
     
   });
