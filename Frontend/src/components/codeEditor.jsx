@@ -87,6 +87,10 @@ const CodeEditor = ({ roomId }) => {
                 fontSize: 14,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
+                // Soft fading blink + caret that glides between positions.
+                cursorBlinking: 'phase',
+                cursorSmoothCaretAnimation: 'on',
+                cursorWidth: 2,
               }}
             />
           </Box>

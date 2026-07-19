@@ -7,11 +7,10 @@ import { StatusChip } from '../components/site/StatusChip.jsx'
 import { SectionCard } from '../components/site/SectionCard.jsx'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
-import { makeId, comingSoon } from '../lib/room.js'
+import { makeId } from '../lib/room.js'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const [envName, setEnvName] = useState('')
   const [runtime, setRuntime] = useState('cpp')
   const [joinCode, setJoinCode] = useState('')
 
@@ -54,25 +53,18 @@ export default function HomePage() {
             teams. Standardized runtimes, real-time cursors, and one-click execution —
             right in your browser.
           </p>
-        </div>
+        </div> 
 
         {/* Two cards */}
-        <div className="mt-16 grid gap-6 md:grid-cols-2">
-          <SectionCard title="Initialize Session" tone="primary">
-            <div className="space-y-5">
-              <Field label="Environment Name">
-                <input
-                  value={envName}
-                  onChange={(e) => setEnvName(e.target.value)}
-                  placeholder="frontend-architecture-review"
-                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/60"
-                />
-              </Field>
+        {/* Both cards share the same shape: one field, one hint, one action. */}
+        <div className="mt-16 grid items-stretch gap-6 md:grid-cols-2">
+          <SectionCard title="Initialize Session" tone="primary" className="flex h-full flex-col">
+            <div className="flex flex-1 flex-col gap-5">
               <Field label="Runtime Engine">
                 <select
                   value={runtime}
                   onChange={(e) => setRuntime(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm text-foreground outline-none focus:border-primary/60"
+                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm text-foreground outline-none transition-colors focus:border-primary/60"
                 >
                   <option value="cpp">C++ 20 · GCC 13</option>
                   <option value="python">Python 3.12</option>
@@ -82,46 +74,36 @@ export default function HomePage() {
                   <option value="go">Go 1.22</option>
                 </select>
               </Field>
+              <Hint>
+                A fresh room is created and the code is yours to share — you can switch
+                runtimes any time from inside the room.
+              </Hint>
               <button
                 onClick={create}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="mt-auto inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Create Session <ArrowRight className="h-4 w-4" />
               </button>
-              {/* Not persisted to the DB yet. */}
-              <p className="text-center font-mono text-[11px] text-muted-foreground/60">
-                Backend room persistence — will be implemented soon
-              </p>
             </div>
           </SectionCard>
 
-          <SectionCard title="Join Session" tone="success">
-            <div className="space-y-5">
+          <SectionCard title="Join Session" tone="success" className="flex h-full flex-col">
+            <div className="flex flex-1 flex-col gap-5">
               <Field label="Room Access Code">
                 <input
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="ABC-123-XYZ"
-                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm tracking-widest text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/60"
+                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm tracking-widest text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary/60"
                 />
               </Field>
-              <div className="rounded-lg border border-dashed border-border bg-panel/60 p-4 font-mono text-xs text-muted-foreground">
-                Ask a teammate to share their session code from the room top bar.
-              </div>
+              <Hint>Ask a teammate to share their session code from the room top bar.</Hint>
               <button
                 onClick={join}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-success/40 bg-success/10 text-sm font-medium text-success hover:bg-success/20"
+                className="mt-auto inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-success/40 bg-success/10 text-sm font-medium text-success transition-colors hover:bg-success/20"
               >
                 Join Session <ArrowRight className="h-4 w-4" />
               </button>
-              <div className="pt-1">
-                <button
-                  onClick={() => comingSoon('Interview Room')}
-                  className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-primary"
-                >
-                  → Launch Interview Room instead
-                </button>
-              </div>
             </div>
           </SectionCard>
         </div>
@@ -155,6 +137,15 @@ function Field({ label, children }) {
       </div>
       {children}
     </label>
+  )
+}
+
+// Dashed note that sits under a field so both cards keep the same rhythm.
+function Hint({ children }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border bg-panel/60 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+      {children}
+    </div>
   )
 }
 
