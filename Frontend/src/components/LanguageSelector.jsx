@@ -7,8 +7,15 @@ const ACTIVE_COLOR = "#3b82f6";
 function LanguageSelector({ language, onSelect }) {
   return (
     <Box mb={4}>
-      <Text mb={2} fontSize="lg" color="#8a8a93">
-        Language:
+      <Text
+        mb={2}
+        fontFamily="mono"
+        fontSize="11px"
+        letterSpacing="0.14em"
+        textTransform="uppercase"
+        color="#8a8a93"
+      >
+        Language
       </Text>
       <Menu.Root>
         <Menu.Trigger asChild>

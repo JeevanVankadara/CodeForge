@@ -11,14 +11,14 @@ import { makeId } from '../lib/room.js'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const [runtime, setRuntime] = useState('cpp')
   const [joinCode, setJoinCode] = useState('')
 
   const create = () => {
     // TODO: wire to POST /rooms/createRoom (backend is ready) once auth flow is in.
+    // No language is chosen here — the room picks it up inside the editor.
     const id = makeId()
     toast.success(`Session initialized — Room ${id}`, { theme: 'dark' })
-    navigate(`/room/${id}?lang=${runtime}`)
+    navigate(`/room/${id}`)
   }
 
   const join = () => {
@@ -60,23 +60,9 @@ export default function HomePage() {
         <div className="mt-16 grid items-stretch gap-6 md:grid-cols-2">
           <SectionCard title="Initialize Session" tone="primary" className="flex h-full flex-col">
             <div className="flex flex-1 flex-col gap-5">
-              <Field label="Runtime Engine">
-                <select
-                  value={runtime}
-                  onChange={(e) => setRuntime(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 font-mono text-sm text-foreground outline-none transition-colors focus:border-primary/60"
-                >
-                  <option value="cpp">C++ 20 · GCC 13</option>
-                  <option value="python">Python 3.12</option>
-                  <option value="javascript">Node.js 20 LTS</option>
-                  <option value="typescript">TypeScript 5.4</option>
-                  <option value="rust">Rust 1.78</option>
-                  <option value="go">Go 1.22</option>
-                </select>
-              </Field>
               <Hint>
-                A fresh room is created and the code is yours to share — you can switch
-                runtimes any time from inside the room.
+                Spin up a fresh room and share its code with your team. Pick the
+                language — and switch it any time — from inside the room.
               </Hint>
               <button
                 onClick={create}

@@ -1,7 +1,21 @@
 import { Box, Text, Button, Textarea } from '@chakra-ui/react'
 import { useState } from 'react'
+import { Play, Terminal } from 'lucide-react'
 import { toast, Bounce } from 'react-toastify'
 import { executeCode } from '../api.js'
+
+// Small uppercase caption used on each console's header strip.
+const PanelLabel = ({ children, color = '#8a8a93' }) => (
+  <Text
+    fontFamily="mono"
+    fontSize="11px"
+    letterSpacing="0.14em"
+    textTransform="uppercase"
+    color={color}
+  >
+    {children}
+  </Text>
+)
 
 const Output = ({ editorRef, language }) => {
   const [input, setInput] = useState('')
@@ -44,88 +58,100 @@ const Output = ({ editorRef, language }) => {
   }
 
   return (
-    <Box w={{ base: '100%', md: '50%' }}>
-      {/* Run button */}
+    <Box w={{ base: '100%', md: '50%' }} display="flex" flexDirection="column" gap={4}>
+      {/* Run action */}
       <Button
-        mb={4}
         onClick={runCode}
         loading={isLoading}
+        alignSelf="flex-start"
         bg="#3b82f6"
         color="white"
         _hover={{ bg: '#2563eb' }}
         _active={{ bg: '#1d4ed8' }}
       >
+        <Play size={15} style={{ marginRight: 6, fill: 'currentColor' }} />
         Run
       </Button>
 
-      {/* Input box (stdin) — scrolls when the text is longer than the box */}
-      <Textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter Input here"
-        height="140px"
-        resize="none"
-        overflowY="auto"
-        fontFamily="mono"
-        fontSize="sm"
-        bg="#0b0b0e"
-        color="#e6e6ea"
-        border="1px solid"
-        borderColor="#1e1e22"
-        borderRadius={8}
-        _placeholder={{ color: '#8a8a93' }}
-        _focus={{ borderColor: '#3b82f6', boxShadow: 'none' }}
-      />
-
-      {/* Helper line */}
-      <Box
-        mt={3}
-        mb={4}
-        p={3}
-        bg="#111114"
-        border="1px solid"
-        borderColor="#1e1e22"
-        borderRadius={8}
-      >
-        <Text fontSize="sm" color="#8a8a93">
-          If your code takes input, add it in the above box before running.
-        </Text>
+      {/* Input console (stdin) */}
+      <Box border="1px solid" borderColor="#1e1e22" borderRadius={12} overflow="hidden" bg="#0b0b0e">
+        <Box px={4} py={2} borderBottom="1px solid" borderColor="#1e1e22">
+          <PanelLabel>stdin</PanelLabel>
+        </Box>
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type program input here before running…"
+          height="120px"
+          resize="none"
+          overflowY="auto"
+          fontFamily="mono"
+          fontSize="sm"
+          bg="transparent"
+          color="#e6e6ea"
+          border="none"
+          borderRadius={0}
+          px={4}
+          py={3}
+          _placeholder={{ color: '#5a5a63' }}
+          _focus={{ boxShadow: 'none', outline: 'none' }}
+        />
       </Box>
 
-      {/* Output heading */}
-      <Text mb={2} fontSize="lg" fontWeight="semibold" color="#e6e6ea">
-        Output
-      </Text>
-
-      {/* Output console — scrolls when the output is longer than the box.
-          stdout lines are light, stderr lines are red. */}
+      {/* Output console — stdout in light, stderr in red. */}
       <Box
-        height={{ base: '40vh', md: '45vh' }}
-        p={3}
-        overflow="auto"
-        fontFamily="mono"
-        fontSize="sm"
-        bg="#0b0b0e"
+        flex="1"
         border="1px solid"
-        borderRadius={8}
         borderColor={stderr ? '#ef4444' : '#1e1e22'}
+        borderRadius={12}
+        overflow="hidden"
+        bg="#0b0b0e"
+        display="flex"
+        flexDirection="column"
       >
-        {hasRun ? (
-          <>
-            {stdout.split('\n').map((line, index) => (
-              <Text key={`out-${index}`} color="#c9c9d0">
-                {line}
-              </Text>
-            ))}
-            {stderr.split('\n').map((line, index) => (
-              <Text key={`err-${index}`} color="#f87171">
-                {line}
-              </Text>
-            ))}
-          </>
-        ) : (
-          <Text color="#8a8a93">Click "Run" to see the output here</Text>
-        )}
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          px={4}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="#1e1e22"
+        >
+          <Box display="flex" alignItems="center" gap={2}>
+            <Terminal size={13} color="#8a8a93" />
+            <PanelLabel>output</PanelLabel>
+          </Box>
+          {hasRun && (
+            <PanelLabel color={stderr ? '#f87171' : '#10b981'}>
+              {stderr ? 'error' : 'exit 0'}
+            </PanelLabel>
+          )}
+        </Box>
+        <Box
+          height={{ base: '34vh', md: '46vh' }}
+          p={4}
+          overflow="auto"
+          fontFamily="mono"
+          fontSize="sm"
+        >
+          {hasRun ? (
+            <>
+              {stdout.split('\n').map((line, index) => (
+                <Text key={`out-${index}`} color="#c9c9d0" whiteSpace="pre-wrap">
+                  {line}
+                </Text>
+              ))}
+              {stderr.split('\n').map((line, index) => (
+                <Text key={`err-${index}`} color="#f87171" whiteSpace="pre-wrap">
+                  {line}
+                </Text>
+              ))}
+            </>
+          ) : (
+            <Text color="#5a5a63">Run your code to see the output here.</Text>
+          )}
+        </Box>
       </Box>
     </Box>
   )
