@@ -1,5 +1,7 @@
 const socketAuth = require('../middlewares/socketAuth');
 const { claimSeat, releaseSeat } = require('../services/roomMembership');
+const registerYdocHandlers = require('./ydocHandlers');
+const { getRoom, closeRoom } = require('../services/YRoomManager');
 
 const listMembers = async (io, roomId) => {
   const sockets = await io.in(roomId).fetchSockets();
@@ -27,6 +29,11 @@ const registerSocketHandlers = (io) => {
   io.on('connection', (socket) => {
     const user = socket.data.user;
     console.log(`Socket ${socket.id} connected (user ${user.id})`);
+
+    // Yjs sync + update relay. The handlers themselves refuse to act until this
+    // socket has joined a room, so registering them up front is safe.
+    registerYdocHandlers(io, socket);
+
     socket.on('room:join', async (roomId, ack) => {
       try {
         if (typeof roomId !== 'string' || !roomId) {
@@ -45,6 +52,9 @@ const registerSocketHandlers = (io) => {
         socket.data.seat = result.seat;
 
         await socket.join(roomId);
+
+        // Warm the document up now so the client's doc:sync doesn't wait on MySQL.
+        await getRoom(roomId);
 
         const members = await listMembers(io, roomId);
         io.to(roomId).emit('room:members', members);
@@ -79,6 +89,12 @@ const registerSocketHandlers = (io) => {
         }
 
         io.to(roomId).emit('room:members', await listMembers(io, roomId));
+
+        // Nobody left in the room -> save the document and release the memory.
+        const remaining = await io.in(roomId).fetchSockets();
+        if (remaining.length === 0) {
+          await closeRoom(roomId);
+        }
       } catch (err) {
         console.error('disconnect cleanup error:', err);
       }
