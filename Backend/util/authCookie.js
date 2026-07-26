@@ -2,10 +2,10 @@
 const COOKIE_NAME = 'token';
 
 const cookieOptions = {
-  httpOnly: true,          // JS can't read it -> safer against XSS
+  httpOnly: true,         
   sameSite: 'lax',
-  secure: false,           // set true when served over HTTPS in production
-  maxAge: 60 * 60 * 1000,  // 1 hour, matches the JWT expiry
+  secure: false,          
+  maxAge: 60 * 60 * 1000, 
 };
 
 const setAuthCookie = (res, token) => res.cookie(COOKIE_NAME, token, cookieOptions);
