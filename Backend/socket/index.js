@@ -1,7 +1,17 @@
+// Wires every socket feature onto the io server: authentication, seat
+// ownership, the Yjs relay and the shared run. server.js only calls this.
+
 const socketAuth = require('../middlewares/socketAuth');
 const { claimSeat, releaseSeat } = require('../services/roomMembership');
 const registerYdocHandlers = require('./ydocHandlers');
-const { getRoom, closeRoom } = require('../services/YRoomManager');
+const registerRunHandlers = require('./runHandlers');
+const { getRoom, closeRoom, dropAwareness } = require('../services/YRoomManager');
+
+// A room holds 3 people. These caps are about connections, not membership: they
+// stop one person opening tabs until the server runs out of memory. The seat
+// rules in roomMembership.js are still what decides who may enter at all.
+const MAX_SOCKETS_PER_ROOM = 6;
+const MAX_SOCKETS_PER_USER = 3;
 
 const listMembers = async (io, roomId) => {
   const sockets = await io.in(roomId).fetchSockets();
@@ -30,9 +40,10 @@ const registerSocketHandlers = (io) => {
     const user = socket.data.user;
     console.log(`Socket ${socket.id} connected (user ${user.id})`);
 
-    // Yjs sync + update relay. The handlers themselves refuse to act until this
-    // socket has joined a room, so registering them up front is safe.
+    // Both refuse to act until this socket has joined a room, so registering
+    // them up front is safe.
     registerYdocHandlers(io, socket);
+    registerRunHandlers(io, socket);
 
     socket.on('room:join', async (roomId, ack) => {
       try {
@@ -41,6 +52,15 @@ const registerSocketHandlers = (io) => {
         }
         if (socket.data.roomId) {
           return ack?.({ ok: false, error: 'This socket already joined a room' });
+        }
+
+        // Connection caps, checked before we touch the database.
+        const open = await io.in(roomId).fetchSockets();
+        if (open.length >= MAX_SOCKETS_PER_ROOM) {
+          return ack?.({ ok: false, error: 'Too many open connections for this room' });
+        }
+        if (open.filter((s) => s.data.user.id === user.id).length >= MAX_SOCKETS_PER_USER) {
+          return ack?.({ ok: false, error: 'Too many open tabs for this room' });
         }
 
         const result = await claimSeat(roomId, user.id);
@@ -81,6 +101,11 @@ const registerSocketHandlers = (io) => {
       if (!roomId) return;
 
       try {
+        if (socket.data.clientId != null) {
+          await dropAwareness(roomId, socket.data.clientId);
+          io.to(roomId).emit('awareness:remove', socket.data.clientId);
+        }
+
         const stillHere = await hasAnotherSocket(io, roomId, user.id, socket.id);
 
         if (!stillHere) {

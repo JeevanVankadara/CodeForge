@@ -1,6 +1,14 @@
-const pool = require('../config/db');
+// The Save button. Only members of the room may save.
+//
+// When the room is live (someone is connected), the server's Y.Doc is the truth
+// and gets written - not the text in the request. Two people editing means the
+// caller's copy is already a moment out of date, and trusting it would undo
+// whatever the others typed in between. The body is only used as a fallback for
+// a room with no live document, e.g. saving right after a server restart.
 
-// Saving the room's code (and language). Only members of the room may save.
+const pool = require('../config/db');
+const { persistRoomById } = require('../services/YRoomManager');
+
 const saveRoom = async (req, res) => {
   const userId = Number(req.user.id);
   const roomId = req.params.id;
@@ -26,6 +34,12 @@ const saveRoom = async (req, res) => {
       room.user2 === userId;
     if (!isMember) {
       return res.status(403).json({ error: 'You are not a member of this room' });
+    }
+
+    // Live room -> save the shared document, code + language + CRDT snapshot.
+    const savedFromMemory = await persistRoomById(roomId);
+    if (savedFromMemory) {
+      return res.status(200).json({ message: 'Saved' });
     }
 
     if (language) {

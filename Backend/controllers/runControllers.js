@@ -1,31 +1,18 @@
-const path = require('path');
-const fs = require('fs/promises');
-const { createLanguageObject } = require('../services/LanguageFactory');
-const runInContainer = require('../services/CodeRunner');
-const {randomUUID} = require('crypto');
+// HTTP entry point for the plain compiler page (no room, no collaboration).
+// The sandboxing itself lives in services/executeCode.js, which the room-wide
+// shared run reuses, so both paths behave identically.
 
-const runController = async(req, res) => {
-  const {language, code, input = ''} = req.body;
-  if(!language || !code || typeof code !== 'string') {
-    return res.status(400).json({error: 'Invalid request body'});
+const executeCode = require('../services/executeCode');
+
+const runController = async (req, res) => {
+  const { language, code, input = '' } = req.body;
+
+  if (!language || !code || typeof code !== 'string') {
+    return res.status(400).json({ error: 'Invalid request body' });
   }
 
-  let runner;
-  try{
-    runner = createLanguageObject(language);
-  }catch(err){
-    return res.status(400).json({error: err.message});
-  }
-
-  const jobId = randomUUID();
-  const jobDir = path.join(__dirname, '../temp', jobId);
-
-   try {
-    await fs.mkdir(jobDir, { recursive: true });
-    await fs.writeFile(path.join(jobDir, runner.fileName), code);
-
-    // Run it in Docker and capture the output.
-    const result = await runInContainer(runner, jobDir, input);
+  try {
+    const result = await executeCode({ language, code, input });
 
     return res.status(200).json({
       output: result.stdout,
@@ -33,10 +20,12 @@ const runController = async(req, res) => {
       exitCode: result.exitCode,
     });
   } catch (error) {
-    console.error(error);
+    // createLanguageObject throws for anything outside the registry.
+    if (/not supported/i.test(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('runController error:', error);
     return res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await fs.rm(jobDir, { recursive: true, force: true });
   }
 };
 

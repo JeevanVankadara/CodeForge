@@ -17,12 +17,23 @@ const PanelLabel = ({ children, color = '#8a8a93' }) => (
   </Text>
 )
 
-const Output = ({ editorRef, language }) => {
+// sharedRun is passed only inside a room. When present, Run is a room-wide
+// action: the server executes the shared document and every member receives the
+// same output, so the local HTTP path below is skipped entirely.
+const Output = ({ editorRef, language, sharedRun }) => {
+  const shared = Boolean(sharedRun)
+
   const [input, setInput] = useState('')
-  const [stdout, setStdout] = useState('')
-  const [stderr, setStderr] = useState('')
-  const [hasRun, setHasRun] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [localStdout, setLocalStdout] = useState('')
+  const [localStderr, setLocalStderr] = useState('')
+  const [localHasRun, setLocalHasRun] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
+
+  // In a room these come from the server broadcast instead of local state.
+  const stdout = shared ? (sharedRun.result?.stdout ?? '') : localStdout
+  const stderr = shared ? (sharedRun.result?.stderr ?? '') : localStderr
+  const hasRun = shared ? Boolean(sharedRun.result) : localHasRun
+  const isLoading = shared ? sharedRun.busy : localLoading
 
   const notifyError = (message) => {
     toast.error(message, {
@@ -37,6 +48,14 @@ const Output = ({ editorRef, language }) => {
   }
 
   const runCode = async () => {
+    // Room: ask the server to run the shared document. The code itself is never
+    // sent - the server already has the authoritative copy.
+    if (shared) {
+      const res = await sharedRun.start(input)
+      if (!res?.ok) notifyError(res?.error || 'Could not start the run')
+      return
+    }
+
     const sourceCode = editorRef.current?.getValue()
 
     if (!sourceCode?.trim()) {
@@ -45,33 +64,41 @@ const Output = ({ editorRef, language }) => {
     }
 
     try {
-      setIsLoading(true)
+      setLocalLoading(true)
       const result = await executeCode(language, sourceCode, input)
-      setStdout(result.stdout)
-      setStderr(result.stderr)
-      setHasRun(true)
+      setLocalStdout(result.stdout)
+      setLocalStderr(result.stderr)
+      setLocalHasRun(true)
     } catch (err) {
       notifyError(err.response?.data?.message || err.message)
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
   return (
     <Box w={{ base: '100%', md: '50%' }} display="flex" flexDirection="column" gap={4}>
-      {/* Run action */}
-      <Button
-        onClick={runCode}
-        loading={isLoading}
-        alignSelf="flex-start"
-        bg="#3b82f6"
-        color="white"
-        _hover={{ bg: '#2563eb' }}
-        _active={{ bg: '#1d4ed8' }}
-      >
-        <Play size={15} style={{ marginRight: 6, fill: 'currentColor' }} />
-        Run
-      </Button>
+      {/* Run action. In a room it is disabled while anyone is running. */}
+      <Box display="flex" alignItems="center" gap={3}>
+        <Button
+          onClick={runCode}
+          loading={isLoading}
+          disabled={isLoading}
+          alignSelf="flex-start"
+          bg="#3b82f6"
+          color="white"
+          _hover={{ bg: '#2563eb' }}
+          _active={{ bg: '#1d4ed8' }}
+        >
+          <Play size={15} style={{ marginRight: 6, fill: 'currentColor' }} />
+          Run
+        </Button>
+        {shared && isLoading && (
+          <PanelLabel color="#8a8a93">
+            {sharedRun.isSelf ? 'running…' : `${sharedRun.runnerName} is running…`}
+          </PanelLabel>
+        )}
+      </Box>
 
       {/* Input console (stdin) */}
       <Box border="1px solid" borderColor="#1e1e22" borderRadius={12} overflow="hidden" bg="#0b0b0e">

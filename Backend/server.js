@@ -10,6 +10,7 @@ dotenv.config();
 const pool = require('./config/db');
 const { UserTable, RoomsTable } = require('./db/schema');
 const registerSocketHandlers = require('./socket');
+const { startAutosave, stopAutosave, flushAll } = require('./services/YRoomManager');
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
@@ -48,14 +49,33 @@ async function ensureColumn(table, column, definition) {
   }
 }
 
+// Widens an existing column when its type is no longer big enough.
+// (ensureColumn only ever ADDs, so it can't fix a column that already exists.)
+async function ensureColumnType(table, column, expectedType, definition) {
+  const [rows] = await pool.promise().query(
+    `SELECT data_type AS t FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+    [table, column]
+  );
+  if (rows.length && String(rows[0].t).toLowerCase() !== expectedType) {
+    await pool.promise().query(`ALTER TABLE ${table} MODIFY ${column} ${definition}`);
+    console.log(`Migration: widened ${table}.${column} to ${expectedType}`);
+  }
+}
+
 async function initDb() {
   await pool.promise().query(UserTable);
   await pool.promise().query(RoomsTable);
   await ensureColumn('rooms', 'language', "VARCHAR(20) NOT NULL DEFAULT 'cpp'");
-  await ensureColumn('rooms', 'code', "TEXT NULL");
+  await ensureColumn('rooms', 'code', "MEDIUMTEXT NULL");
   await ensureColumn('rooms', 'updated_at',
     "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-  await ensureColumn('rooms', 'ydoc_state', "BLOB NULL");
+  await ensureColumn('rooms', 'ydoc_state', "MEDIUMBLOB NULL");
+
+  // A plain BLOB/TEXT tops out at 64KB. A Yjs snapshot keeps edit history, so a
+  // real session outgrows that quickly and the save would fail. MEDIUM* is 16MB.
+  await ensureColumnType('rooms', 'ydoc_state', 'mediumblob', 'MEDIUMBLOB NULL');
+  await ensureColumnType('rooms', 'code', 'mediumtext', 'MEDIUMTEXT NULL');
 
   console.log('Database tables are ready');
 }
@@ -64,8 +84,37 @@ app.get('/health', (req, res) => {
   res.status(200).json('Server is running fine');
 });
 
+// Ctrl+C or a container stop must not throw away up to 15 seconds of typing,
+// so every open room is written before the process exits.
+let shuttingDown = false;
+
+const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  console.log(`\n${signal} received - saving open rooms...`);
+  stopAutosave();
+
+  try {
+    await flushAll();
+    console.log('All open rooms saved');
+  } catch (err) {
+    console.error('Shutdown save failed:', err.message);
+  }
+
+  io.close();
+  httpServer.close(() => process.exit(0));
+
+  // Don't hang forever on a socket that refuses to close.
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
 initDb()
   .then(() => {
+    startAutosave();
     httpServer.listen(port, () => {
       console.log(`Server is running on port ${port}`);
       console.log(`Socket.IO ready, accepting connections from ${CLIENT_ORIGIN}`);

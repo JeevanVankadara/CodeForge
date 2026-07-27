@@ -19,7 +19,13 @@ export default function PresenceBar({ users, selfLevel = 0, micStatus = 'idle' }
     <div className="flex items-center gap-3">
       <div className="flex -space-x-2">
         {users.map((u) => (
-          <VoiceAvatar key={u.id} name={u.name} self={u.self} level={u.self ? selfLevel : 0} />
+          <VoiceAvatar
+            key={u.id}
+            name={u.name}
+            color={u.color}
+            self={u.self}
+            level={u.self ? selfLevel : 0}
+          />
         ))}
       </div>
       <div className="hidden flex-col leading-tight sm:flex">

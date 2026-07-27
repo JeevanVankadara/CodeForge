@@ -25,7 +25,7 @@ function initials(name) {
 
 // Renders one member as an avatar whose halo swells with their live audio
 // level (0..1). Only the speaking user carries a non-zero level.
-export default function VoiceAvatar({ name, level = 0, self = false, size = 34 }) {
+export default function VoiceAvatar({ name, level = 0, self = false, size = 34, color }) {
   const speaking = level > 0.12
   // Halo scales with volume, kept subtle so it reads as "voice" not a bounce.
   const haloScale = 1 + Math.min(level, 1) * 0.7
@@ -44,10 +44,13 @@ export default function VoiceAvatar({ name, level = 0, self = false, size = 34 }
       <span
         className={cn(
           'relative grid h-full w-full place-items-center rounded-full font-mono font-semibold ring-2 ring-background',
-          pickColor(name),
+          !color && pickColor(name),
           self ? 'opacity-100' : 'opacity-70',
         )}
-        style={{ fontSize: size * 0.38 }}
+        style={{
+          fontSize: size * 0.38,
+          ...(color ? { backgroundColor: color, color: '#0b0b0e' } : null),
+        }}
       >
         {initials(name)}
       </span>
