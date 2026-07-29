@@ -70,7 +70,18 @@ const Output = ({ editorRef, language, sharedRun }) => {
       setLocalStderr(result.stderr)
       setLocalHasRun(true)
     } catch (err) {
-      notifyError(err.response?.data?.message || err.message)
+      // /run needs a login now, so the anonymous case has to say something
+      // better than "Access denied. No token provided."
+      const status = err.response?.status
+      if (status === 401 || status === 400) {
+        notifyError('Please log in to run code.')
+      } else if (status === 429) {
+        notifyError('Too many runs - please wait a moment.')
+      } else {
+        // The run routes answer with { error }, the auth ones with { message }.
+        const body = err.response?.data
+        notifyError(body?.error || body?.message || err.message)
+      }
     } finally {
       setLocalLoading(false)
     }

@@ -51,6 +51,8 @@ function runInContainer(runner, jobDir, input = "") {
       "256m",
       "--cpus",
       "0.5",
+      "--pids-limit",
+      "64",
       "-v",
       `${jobDir}:/app`,
       "-w",

@@ -16,6 +16,11 @@ const { closeQueue } = require('./services/runQueue');
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 const app = express();
+// Duriong the production only
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(cors({
   origin: CLIENT_ORIGIN,
   credentials: true

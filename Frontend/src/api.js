@@ -1,7 +1,10 @@
 import axios from 'axios';
+import { API_URL } from './lib/config';
 
+// /run is auth-protected, so the cookie has to travel with the request.
 const api = axios.create({
-  baseURL: 'http://localhost:3000'
+  baseURL: API_URL,
+  withCredentials: true,
 });
 
 export const executeCode = async (language, code, input = '') => {

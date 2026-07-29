@@ -1,7 +1,8 @@
 import axios from 'axios'
+import { API_URL } from './config'
 
 // Auth-protected, because each call mints TURN credentials.
-const api = axios.create({ baseURL: 'http://localhost:3000', withCredentials: true })
+const api = axios.create({ baseURL: API_URL, withCredentials: true })
 
 // Cached, but no longer forever. Phase 2 kept this for the lifetime of the page,
 // which was fine while the answer was public STUN. TURN credentials expire, and

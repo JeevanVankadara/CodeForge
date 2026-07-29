@@ -1,9 +1,10 @@
 import axios from 'axios'
+import { API_URL } from './config'
 
 // withCredentials lets the browser send/receive the auth cookie set by the backend.
 // The JWT lives in an HttpOnly cookie — there is no token to handle on the client.
 const authApi = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: API_URL,
   withCredentials: true,
 })
 
