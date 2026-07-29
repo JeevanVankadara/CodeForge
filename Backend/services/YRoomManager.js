@@ -29,7 +29,12 @@ const STATE_MAX_BYTES = 15 * 1024 * 1024;
 
 // A run whose finally-block never fired (process killed mid-run) must not block
 // the room forever, so a lock older than this is treated as stale.
-const RUN_LOCK_TTL_MS = 60 * 1000;
+//
+// It has to comfortably exceed RUN_WAIT_MS (the queue-wait ceiling) plus the
+// container timeout. A run that sits in a busy queue for nearly a minute and
+// then executes is perfectly healthy, and must not have its lock stolen by
+// another member while it is still going.
+const RUN_LOCK_TTL_MS = 2 * 60 * 1000;
 
 //Building the Y.doc from whatever Mysql has
 const hydrate = async(roomId) => {

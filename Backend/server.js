@@ -11,6 +11,7 @@ const pool = require('./config/db');
 const { UserTable, RoomsTable } = require('./db/schema');
 const registerSocketHandlers = require('./socket');
 const { startAutosave, stopAutosave, flushAll } = require('./services/YRoomManager');
+const { closeQueue } = require('./services/runQueue');
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
@@ -102,6 +103,9 @@ const shutdown = async (signal) => {
   } catch (err) {
     console.error('Shutdown save failed:', err.message);
   }
+
+  // Releases the Redis connections so the process can actually exit.
+  await closeQueue();
 
   io.close();
   httpServer.close(() => process.exit(0));

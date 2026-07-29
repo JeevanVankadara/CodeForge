@@ -1,8 +1,11 @@
 // HTTP entry point for the plain compiler page (no room, no collaboration).
-// The sandboxing itself lives in services/executeCode.js, which the room-wide
-// shared run reuses, so both paths behave identically.
+//
+// This process never starts a container any more: it puts a job on the queue and
+// waits for a worker to finish it. The request still blocks, but it now blocks
+// on Redis rather than on a container, so a hundred simultaneous requests cost a
+// hundred cheap waits instead of a hundred containers.
 
-const executeCode = require('../services/executeCode');
+const { enqueueRun, waitForRun } = require('../services/runQueue');
 
 const runController = async (req, res) => {
   const { language, code, input = '' } = req.body;
@@ -11,8 +14,16 @@ const runController = async (req, res) => {
     return res.status(400).json({ error: 'Invalid request body' });
   }
 
+  let job;
   try {
-    const result = await executeCode({ language, code, input });
+    ({ job } = await enqueueRun({ language, code, input }));
+  } catch (error) {
+    // enqueueRun rejects unsupported languages and oversized payloads.
+    return res.status(400).json({ error: error.message });
+  }
+
+  try {
+    const result = await waitForRun(job);
 
     return res.status(200).json({
       output: result.stdout,
@@ -20,12 +31,11 @@ const runController = async (req, res) => {
       exitCode: result.exitCode,
     });
   } catch (error) {
-    // createLanguageObject throws for anything outside the registry.
-    if (/not supported/i.test(error.message)) {
-      return res.status(400).json({ error: error.message });
-    }
-    console.error('runController error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    // Getting here means the run could not be carried out at all - no worker,
+    // Docker down, or the total wait ceiling was hit. A program that merely
+    // crashed came back above with a non-zero exitCode.
+    console.error('runController error:', error.message);
+    return res.status(503).json({ error: error.message || 'Could not run the code' });
   }
 };
 

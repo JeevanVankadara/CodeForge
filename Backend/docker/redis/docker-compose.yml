@@ -1,0 +1,34 @@
+# Redis backing the BullMQ run queue.
+#
+# Start it with:  docker compose -f docker/redis/docker-compose.yml up -d
+#
+# Nothing here is durable on purpose. The queue only ever holds in-flight runs,
+# so if this container restarts the worst case is that a few queued runs are
+# lost and the user presses Run again. Everything worth keeping lives in MySQL.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: codeforge-redis
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      # No RDB snapshots and no AOF: see the note above.
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      # noeviction is the only safe policy for a queue. Any other policy lets
+      # Redis silently delete job keys under memory pressure, which would look
+      # like runs vanishing at random.
+      - --maxmemory-policy
+      - noeviction
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
