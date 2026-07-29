@@ -1,0 +1,23 @@
+# A long-running service, unlike the language sandboxes next door - those are
+# built and thrown away per execution by dockerode; this one stays up.
+#
+#   cd Backend/docker/coturn
+#   docker compose --env-file ../../.env up -d
+#
+services:
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: codeforge-coturn
+    restart: unless-stopped
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    ports:
+      - '3478:3478/udp'
+      - '3478:3478/tcp'
+      # Must stay in step with min-port/max-port in turnserver.conf.
+      - '49160-49200:49160-49200/udp'
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+      - --static-auth-secret=${TURN_SECRET:?set TURN_SECRET in Backend/.env}
+      - --realm=${TURN_REALM:-codeforge}

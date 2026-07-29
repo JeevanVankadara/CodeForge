@@ -8,7 +8,10 @@ import LanguageSelector from './LanguageSelector.jsx'
 import Output from './Output.jsx'
 import EditorTopBar from './EditorTopBar.jsx'
 import RoomTopBar from './CollabRoomComponents/RoomTopBar.jsx'
-import { useMicLevel } from './CollabRoomComponents/useMicLevel.js'
+import PeerAudio from './CollabRoomComponents/PeerAudio.jsx'
+import { useMicStream } from '../hooks/useMicStream.js'
+import { useAudioLevels } from '../hooks/useAudioLevels.js'
+import { useVoiceRoom } from '../hooks/useVoiceRoom.js'
 import { Caution } from './site/Caution.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCollabRoom } from '../hooks/useCollabRoom.js'
@@ -42,6 +45,12 @@ const CodeEditor = ({ roomId }) => {
   const [localLanguage, setLocalLanguage] = useState('cpp')
   const [saving, setSaving] = useState(false)
   const [caution, setCaution] = useState(null)
+  // Which room the user turned voice on for - not a plain boolean, so walking
+  // into a different room drops the mic without anything having to notice.
+  const [voiceRoomId, setVoiceRoomId] = useState(null)
+  // Sticky across leaving and rejoining the call: someone who muted themselves
+  // meant it, and should not be reopened by a reconnect.
+  const [micMuted, setMicMuted] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -55,27 +64,88 @@ const CodeEditor = ({ roomId }) => {
     members,
     language: sharedLanguage,
     run,
+    socket,
   } = useCollabRoom({ roomId, user, enabled: isCollab })
 
   // In a room the language is part of the shared document, so everyone's editor
   // highlights the same way. 'cpp' covers the moment before the first sync.
   const language = isCollab ? (sharedLanguage ?? 'cpp') : localLanguage
 
-  // Local mic drives the current user's avatar; only run it inside a room.
-  const { level: micLevel, status: micStatus } = useMicLevel(isCollab)
+  // Voice is opt-in: nothing touches the microphone until the user asks for it,
+  // so simply opening a room no longer raises a permission prompt.
+  const voiceOn = isCollab && voiceRoomId === roomId
+  const { stream: micStream, status: micStatus } = useMicStream(voiceOn)
 
+  const toggleVoice = () => setVoiceRoomId((current) => (current === roomId ? null : roomId))
+
+  // Voice rides on the room's own socket, so it waits for that socket to be in
+  // the room - and for the mic, since a connection is built around the track it
+  // is going to carry.
+  const voice = useVoiceRoom({
+    socket,
+    micStream,
+    enabled: voiceOn && status === 'live' && micStatus === 'live',
+    onError: (message) => {
+      // Refused - most likely this user already has voice open in another tab.
+      // Drop back out rather than leave the mic running for nothing.
+      toast.error(message, { theme: 'dark' })
+      setVoiceRoomId(null)
+    },
+  })
+
+  // Our own mic alongside every peer's audio, measured together by one meter.
+  const voiceStreams = useMemo(
+    () => (micStream ? { self: micStream, ...voice.streams } : voice.streams),
+    [micStream, voice.streams],
+  )
+  const levels = useAudioLevels(voiceStreams)
+
+  // Applied whenever the mute setting changes, and again after every (re)join:
+  // a rebuilt call may be carrying a brand new microphone track, and a new track
+  // always starts unmuted.
+  const { setMuted: applyMuted, status: voiceStatus } = voice
+  useEffect(() => {
+    applyMuted(micMuted)
+  }, [micMuted, applyMuted, voiceStatus])
+
+  // Room membership and call membership are different lists - being in a room
+  // does not put you on the call - so they are joined here for display.
+  //
+  // Matched on user id rather than socket id, which is safe precisely because
+  // the server allows each user only one voice tab: the mapping is one to one.
   const users = useMemo(() => {
-    if (members.length > 0) return members
-    const fallbackKey = user?.id ?? user?.email ?? 'me'
-    return [
-      {
-        id: fallbackKey,
-        name: user?.name || 'You',
-        color: colorFor(fallbackKey),
-        self: true,
-      },
-    ]
-  }, [members, user])
+    const base =
+      members.length > 0
+        ? members
+        : [
+            {
+              id: user?.id ?? user?.email ?? 'me',
+              name: user?.name || 'You',
+              color: colorFor(user?.id ?? user?.email ?? 'me'),
+              self: true,
+            },
+          ]
+
+    const onCall = new Map(voice.peers.map((p) => [String(p.userId), p]))
+
+    return base.map((member) => {
+      if (member.self) {
+        return {
+          ...member,
+          onCall: voice.status === 'live',
+          muted: micMuted,
+          level: levels.self ?? 0,
+        }
+      }
+      const peer = onCall.get(String(member.id))
+      return {
+        ...member,
+        onCall: Boolean(peer),
+        muted: Boolean(peer?.muted),
+        level: peer ? (levels[peer.socketId] ?? 0) : 0,
+      }
+    })
+  }, [members, user, voice.peers, voice.status, levels, micMuted])
 
   const onMount = (editor) => {
     editorRef.current = editor
@@ -195,8 +265,12 @@ const CodeEditor = ({ roomId }) => {
         <RoomTopBar
           roomId={roomId}
           users={users}
-          selfLevel={micLevel}
           micStatus={micStatus}
+          voiceOn={voiceOn}
+          voicePeers={voice.peers}
+          muted={micMuted}
+          onToggleVoice={toggleVoice}
+          onToggleMute={() => setMicMuted((m) => !m)}
           onSave={onSave}
           saving={saving}
         />
@@ -284,6 +358,11 @@ const CodeEditor = ({ roomId }) => {
         </Box>
         <Output editorRef={editorRef} language={language} sharedRun={sharedRun} />
       </Stack>
+
+      {/* One hidden player per peer - this is what makes the call audible. */}
+      {Object.entries(voice.streams).map(([socketId, stream]) => (
+        <PeerAudio key={socketId} stream={stream} />
+      ))}
 
       {/* Warns before a language switch or reset wipes written code. */}
       <Caution

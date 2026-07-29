@@ -26,6 +26,7 @@ app.use(cookieParser()); // reads cookies into req.cookies (e.g. the auth token)
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/rooms', require('./routes/roomsRoutes'));
 app.use('/run', require('./routes/runRoutes'));
+app.use('/rtc', require('./routes/rtcRoutes'));
 
 const port = process.env.PORT || 3000;
 

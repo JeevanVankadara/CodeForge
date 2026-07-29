@@ -5,6 +5,7 @@ const socketAuth = require('../middlewares/socketAuth');
 const { claimSeat, releaseSeat } = require('../services/roomMembership');
 const registerYdocHandlers = require('./ydocHandlers');
 const registerRunHandlers = require('./runHandlers');
+const registerVoiceHandlers = require('./voiceHandlers');
 const { getRoom, closeRoom, dropAwareness } = require('../services/YRoomManager');
 
 // A room holds 3 people. These caps are about connections, not membership: they
@@ -40,10 +41,11 @@ const registerSocketHandlers = (io) => {
     const user = socket.data.user;
     console.log(`Socket ${socket.id} connected (user ${user.id})`);
 
-    // Both refuse to act until this socket has joined a room, so registering
-    // them up front is safe.
+    // All three refuse to act until this socket has joined a room, so
+    // registering them up front is safe.
     registerYdocHandlers(io, socket);
     registerRunHandlers(io, socket);
+    registerVoiceHandlers(io, socket);
 
     socket.on('room:join', async (roomId, ack) => {
       try {

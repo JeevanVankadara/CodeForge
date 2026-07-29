@@ -7,6 +7,11 @@
 //   members       - who is here, with the colours their cursors use
 //   run           - the room-wide run: who started it and what it printed
 //
+// It also hands out the live socket. Voice signalling rides on this same
+// connection rather than opening a second one, so it needs the instance - and it
+// needs to be told when a new one replaces it, which is why this is state and
+// not just the ref below.
+//
 // Everything is created and destroyed inside one effect, so leaving the page
 // closes the socket, retires this user's cursor and frees the document.
 
@@ -36,6 +41,7 @@ export function useCollabRoom({ roomId, user, enabled }) {
   const [members, setMembers] = useState([])
   const [language, setLanguage] = useState(null)
   const [run, setRun] = useState(IDLE_RUN)
+  const [liveSocket, setLiveSocket] = useState(null)
 
   // Refs, not state: these are external objects React only needs to reach, and
   // publishing them through setState would re-render the editor for no reason.
@@ -114,6 +120,10 @@ export function useCollabRoom({ roomId, user, enabled }) {
     textRef.current = text
     metaRef.current = meta
     socketRef.current = socket
+    // Publishing the socket is the "subscribe to an external system" case: it is
+    // born here, and the voice layer has to re-run when a new one replaces it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLiveSocket(socket)
 
     const self = {
       id: user.id ?? user.email ?? 'me',
@@ -372,8 +382,20 @@ export function useCollabRoom({ roomId, user, enabled }) {
       textRef.current = null
       metaRef.current = null
       socketRef.current = null
+      setLiveSocket(null)
     }
   }, [enabled, roomId, user?.id, user?.name, user?.email])
 
-  return { attachEditor, getCode, setCode, applyLanguage, startRun, status, members, language, run }
+  return {
+    attachEditor,
+    getCode,
+    setCode,
+    applyLanguage,
+    startRun,
+    status,
+    members,
+    language,
+    run,
+    socket: liveSocket,
+  }
 }

@@ -1,3 +1,4 @@
+import { MicOff } from 'lucide-react'
 import { cn } from '../../lib/utils.js'
 
 // Deterministic colour per name so an avatar keeps its colour across renders.
@@ -23,19 +24,34 @@ function initials(name) {
     .toUpperCase()
 }
 
-// Renders one member as an avatar whose halo swells with their live audio
-// level (0..1). Only the speaking user carries a non-zero level.
-export default function VoiceAvatar({ name, level = 0, self = false, size = 34, color }) {
-  const speaking = level > 0.12
+// Renders one member as an avatar whose halo swells with their live audio level
+// (0..1), and whose badge says where they stand on the call.
+//
+// Three states worth telling apart, because they mean very different things:
+//   in the room but not on the call - cannot hear you
+//   on the call, muted             - can hear you, you cannot hear them
+//   on the call, live              - halo swells while they speak
+export default function VoiceAvatar({
+  name,
+  level = 0,
+  self = false,
+  size = 34,
+  color,
+  muted = false,
+  onCall = false,
+}) {
+  const speaking = onCall && !muted && level > 0.12
   // Halo scales with volume, kept subtle so it reads as "voice" not a bounce.
   const haloScale = 1 + Math.min(level, 1) * 0.7
 
+  const title = self
+    ? `${name} (you)${muted ? ' - muted' : ''}`
+    : onCall
+      ? `${name}${muted ? ' - muted' : ' - on the call'}`
+      : `${name} - not on the call`
+
   return (
-    <div
-      className="relative grid place-items-center"
-      style={{ width: size, height: size }}
-      title={self ? `${name} (you)` : name}
-    >
+    <div className="relative grid place-items-center" style={{ width: size, height: size }} title={title}>
       {/* Audio-reactive halo behind the avatar. */}
       <span
         className={cn('absolute inset-0 rounded-full', speaking ? 'bg-success/25' : 'bg-transparent')}
@@ -54,13 +70,22 @@ export default function VoiceAvatar({ name, level = 0, self = false, size = 34, 
       >
         {initials(name)}
       </span>
-      {/* Green pulsing dot while speaking, dim otherwise. */}
+      {/* Badge: red crossed mic when muted, green when on the call (pulsing
+          while speaking), dim grey when not on the call at all. */}
       <span
         className={cn(
-          'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background',
-          speaking ? 'bg-success animate-[pulse-dot_1.2s_ease-in-out_infinite]' : 'bg-muted-foreground/40',
+          'absolute -bottom-0.5 -right-0.5 grid h-3 w-3 place-items-center rounded-full ring-2 ring-background',
+          muted
+            ? 'bg-destructive'
+            : onCall
+              ? speaking
+                ? 'bg-success animate-[pulse-dot_1.2s_ease-in-out_infinite]'
+                : 'bg-success'
+              : 'bg-muted-foreground/40',
         )}
-      />
+      >
+        {muted && <MicOff className="h-2 w-2 text-destructive-foreground" />}
+      </span>
     </div>
   )
 }

@@ -6,7 +6,18 @@ import PresenceBar from './PresenceBar.jsx'
 
 // Room header: brand, copyable room code, live presence, and the Save action.
 // Presence + Save are room-only, so this stays separate from the compiler bar.
-export default function RoomTopBar({ roomId, users, selfLevel, micStatus, onSave, saving }) {
+export default function RoomTopBar({
+  roomId,
+  users,
+  micStatus,
+  voiceOn,
+  voicePeers,
+  muted,
+  onToggleVoice,
+  onToggleMute,
+  onSave,
+  saving,
+}) {
   const copyCode = () => {
     navigator.clipboard?.writeText(roomId)
     toast.success('Room code copied', { theme: 'dark' })
@@ -26,7 +37,15 @@ export default function RoomTopBar({ roomId, users, selfLevel, micStatus, onSave
         </button>
       </div>
 
-      <PresenceBar users={users} selfLevel={selfLevel} micStatus={micStatus} />
+      <PresenceBar
+        users={users}
+        micStatus={micStatus}
+        voiceOn={voiceOn}
+        voicePeers={voicePeers}
+        muted={muted}
+        onToggleVoice={onToggleVoice}
+        onToggleMute={onToggleMute}
+      />
 
       <div className="flex items-center gap-3">
         <Link
