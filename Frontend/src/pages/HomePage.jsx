@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Cpu, Video, Zap, ArrowRight } from 'lucide-react'
+import { Users, Cpu, Zap, ArrowRight } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 import { StatusChip } from '../components/site/StatusChip.jsx'
@@ -45,11 +45,9 @@ export default function HomePage() {
             Code Together.
             <br />
             Compile Together.
-            <br />
-            <span className="text-muted-foreground/70">Interview Together.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            The low-latency IDE for technical assessments and distributed engineering
+            The low-latency IDE for distributed engineering
             teams. Standardized runtimes, real-time cursors, and one-click execution —
             right in your browser.
           </p>
@@ -101,10 +99,9 @@ export default function HomePage() {
             Platform Capabilities
             <span className="h-px flex-1 bg-border" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Feature icon={Users} title="Real-time Collaboration" desc="Multi-cursor editing with sub-100ms sync." />
             <Feature icon={Cpu} title="Multi-language Compiler" desc="14 runtimes, pinned versions, sandboxed." />
-            <Feature icon={Video} title="Live Interview Mode" desc="Integrated video, timer, and lockdown." />
             <Feature icon={Zap} title="Fast Execution" desc="Cold-start under 400ms on every runtime." />
           </div>
         </div>

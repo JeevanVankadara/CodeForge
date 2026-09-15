@@ -1,9 +1,12 @@
 // Rate limits for the endpoints that are worth abusing.
 
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const minutes = (n) => n * 60 * 1000;
-const byUser = (req) => (req.user?.id ? `u:${req.user.id}` : `ip:${req.ip}`);
+
+// ipKeyGenerator buckets IPv6 by /64 rather than by exact address. A raw req.ip
+// would let anyone with an IPv6 allocation get a fresh limit per address.
+const byUser = (req) => (req.user?.id ? `u:${req.user.id}` : ipKeyGenerator(req.ip));
 
 const runLimiter = rateLimit({
   windowMs: minutes(1),

@@ -1,6 +1,10 @@
 // One place for the auth cookie name + options so every route agrees.
 const COOKIE_NAME = 'token';
 
+// Cross-site in production (separate domains + HTTPS), same-site in dev.
+// Browsers only accept sameSite:'none' together with secure:true.
+const isProduction = process.env.NODE_ENV === 'production';
+
 const cookieOptions = {
   httpOnly: true,
   sameSite: isProduction ? 'none' : 'lax',
