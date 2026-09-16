@@ -3,8 +3,8 @@ const fs = require('fs/promises');
 const { spawn } = require('child_process');
 const { randomUUID } = require('crypto');
 
-const TIME_LIMIT_S = 10;
-const COMPILE_LIMIT_S = 20;
+const TIME_LIMIT_S = Number(process.env.RUN_TIME_LIMIT_S || 10);
+const COMPILE_LIMIT_S = Number(process.env.COMPILE_LIMIT_S || 60);
 const MAX_OUTPUT_BYTES = 64 * 1024;
 const ROOT = path.join(__dirname, '../../temp');
 
