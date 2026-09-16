@@ -104,3 +104,115 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.55; transform: scale(0.85); }
 }
+
+.problem-html {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: #c9c9d0;
+}
+.problem-html p {
+  margin: 0 0 0.75rem;
+}
+.problem-html ul,
+.problem-html ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.4rem;
+}
+.problem-html ul {
+  list-style: disc;
+}
+.problem-html ol {
+  list-style: decimal;
+}
+.problem-html li {
+  margin-bottom: 0.25rem;
+}
+.problem-html b,
+.problem-html strong,
+.problem-html .tex-font-style-bf {
+  font-weight: 700;
+  color: #e6e6ea;
+}
+.problem-html i,
+.problem-html em,
+.problem-html .tex-font-style-it {
+  font-style: italic;
+}
+.problem-html .tex-font-style-tt,
+.problem-html code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: #17171b;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.problem-html .tex-font-style-underline {
+  text-decoration: underline;
+}
+.problem-html .tex-font-style-striked {
+  text-decoration: line-through;
+}
+.problem-html .tex-font-size-large {
+  font-size: 1.2em;
+}
+.problem-html .tex-font-size-small {
+  font-size: 0.85em;
+}
+.problem-html .tex-span {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.1em;
+  color: #e6e6ea;
+  white-space: nowrap;
+}
+.problem-html sup,
+.problem-html sub {
+  font-size: 0.75em;
+  line-height: 0;
+}
+.problem-html pre {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #111114;
+  border: 1px solid #1e1e22;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: #e6e6ea;
+}
+.problem-html center {
+  text-align: center;
+  margin: 0.5rem 0 1rem;
+}
+.problem-html .epigraph {
+  width: 70%;
+  margin: 0 0 1rem auto;
+  text-align: right;
+  font-style: italic;
+  color: #8a8a93;
+}
+.problem-html .epigraph-source {
+  font-size: 0.85em;
+}
+.problem-html img {
+  max-width: 100%;
+}
+.problem-html img.tex-formula {
+  filter: invert(1) hue-rotate(180deg);
+  vertical-align: middle;
+}
+.problem-html .katex {
+  font-size: 1.05em;
+  color: #e6e6ea;
+}
+.problem-html .katex-display {
+  margin: 0.5rem 0 1rem;
+  padding: 0.25rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a30 transparent;
+}

@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 dotenv.config();
 
 const pool = require('./config/db');
-const { UserTable, RoomsTable } = require('./db/schema');
+const { UserTable, RoomsTable, ProblemsTable } = require('./db/schema');
 const registerSocketHandlers = require('./socket');
 const { startAutosave, stopAutosave, flushAll } = require('./services/YRoomManager');
 const { closeQueue } = require('./services/runQueue');
@@ -34,6 +34,7 @@ app.use('/auth', require('./routes/authRoutes'));
 app.use('/rooms', require('./routes/roomsRoutes'));
 app.use('/run', require('./routes/runRoutes'));
 app.use('/rtc', require('./routes/rtcRoutes'));
+app.use('/problems', require('./routes/problemsRoutes'));
 
 const port = process.env.PORT || 3000;
 
@@ -74,6 +75,7 @@ async function ensureColumnType(table, column, expectedType, definition) {
 async function initDb() {
   await pool.promise().query(UserTable);
   await pool.promise().query(RoomsTable);
+  await pool.promise().query(ProblemsTable);
   await ensureColumn('rooms', 'language', "VARCHAR(20) NOT NULL DEFAULT 'cpp'");
   await ensureColumn('rooms', 'code', "MEDIUMTEXT NULL");
   await ensureColumn('rooms', 'updated_at',

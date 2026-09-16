@@ -8,7 +8,8 @@
 const { enqueueRun, waitForRun } = require('../services/runQueue');
 
 const runController = async (req, res) => {
-  const { language, code, input = '' } = req.body;
+  const { language, code } = req.body;
+  const inputs = Array.isArray(req.body.inputs) ? req.body.inputs : [req.body.input ?? ''];
 
   if (!language || !code || typeof code !== 'string') {
     return res.status(400).json({ error: 'Invalid request body' });
@@ -16,20 +17,16 @@ const runController = async (req, res) => {
 
   let job;
   try {
-    ({ job } = await enqueueRun({ language, code, input }));
+    ({ job } = await enqueueRun({ language, code, inputs }));
   } catch (error) {
     // enqueueRun rejects unsupported languages and oversized payloads.
     return res.status(400).json({ error: error.message });
   }
 
   try {
-    const result = await waitForRun(job);
+    const results = await waitForRun(job);
 
-    return res.status(200).json({
-      output: result.stdout,
-      error: result.stderr,
-      exitCode: result.exitCode,
-    });
+    return res.status(200).json({ results });
   } catch (error) {
     // Getting here means the run could not be carried out at all - no worker,
     // Docker down, or the total wait ceiling was hit. A program that merely

@@ -1,7 +1,7 @@
 export const LANGUAGE_VERSIONS = {
   cpp: "GCC 13 / C++17",
   java: "JDK 21",
-  python: "3.11",
+  python: "3.12",
 };
 
 export const CODE_SNIPPETS = {

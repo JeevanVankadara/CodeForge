@@ -17,6 +17,15 @@ const runLimiter = rateLimit({
   message: { error: 'Too many runs - please slow down' },
 });
 
+const problemLimiter = rateLimit({
+  windowMs: minutes(1),
+  limit: 20,
+  keyGenerator: byUser,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many problem loads - please slow down' },
+});
+
 const loginLimiter = rateLimit({
   windowMs: minutes(15),
   limit: 10,
@@ -34,4 +43,4 @@ const signupLimiter = rateLimit({
   message: { message: 'Too many accounts created - try again later' },
 });
 
-module.exports = { runLimiter, loginLimiter, signupLimiter };
+module.exports = { runLimiter, problemLimiter, loginLimiter, signupLimiter };

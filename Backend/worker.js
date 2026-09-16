@@ -25,18 +25,18 @@ const CONCURRENCY = Number(process.env.RUN_CONCURRENCY || 4);
 const worker = new Worker(
   QUEUE_NAME,
   async (job) => {
-    const { language, code, input = '' } = job.data;
+    const { language, code, inputs = [''] } = job.data;
     const started = Date.now();
 
     // Anything executeCode throws is an infrastructure fault and marks the job
     // failed, which is what makes the retry in defaultJobOptions meaningful. A
     // program that crashes or times out comes back as a normal resolved result.
-    const result = await executeCode({ language, code, input });
+    const results = await executeCode({ language, code, inputs });
 
     console.log(
-      `job ${job.id} ${language} exit=${result.exitCode} in ${Date.now() - started}ms`
+      `job ${job.id} ${language} exit=${results.map((r) => r.exitCode).join(',')} in ${Date.now() - started}ms`
     );
-    return result;
+    return results;
   },
   {
     connection: createRedis(),

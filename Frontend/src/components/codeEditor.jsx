@@ -1,14 +1,17 @@
 import Editor from '@monaco-editor/react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Stack } from '@chakra-ui/react'
+import { Box } from '@chakra-ui/react'
 import { RotateCcw } from 'lucide-react'
 import { toast } from 'react-toastify'
-import LanguageSelector from './LanguageSelector.jsx'
-import Output from './Output.jsx'
-import EditorTopBar from './EditorTopBar.jsx'
-import RoomTopBar from './CollabRoomComponents/RoomTopBar.jsx'
+import EditorBar from './EditorBar.jsx'
+import ProblemPanel from './ProblemPanel.jsx'
+import TestPanel from './TestPanel.jsx'
 import PeerAudio from './CollabRoomComponents/PeerAudio.jsx'
+import { useRun } from '../hooks/useRun.js'
+import { useSplit } from '../hooks/useSplit.js'
+import { allAccepted } from '../lib/verdict.js'
+import { getProblem } from '../lib/problemsApi.js'
 import { useMicStream } from '../hooks/useMicStream.js'
 import { useAudioLevels } from '../hooks/useAudioLevels.js'
 import { useVoiceRoom } from '../hooks/useVoiceRoom.js'
@@ -51,21 +54,54 @@ const CodeEditor = ({ roomId }) => {
   // Sticky across leaving and rejoining the call: someone who muted themselves
   // meant it, and should not be reopened by a reconnect.
   const [micMuted, setMicMuted] = useState(false)
+  const [problem, setProblem] = useState(null)
+  const [caseIndex, setCaseIndex] = useState(0)
+  const [cases, setCases] = useState([{ input: '', expected: null }])
+  const [testView, setTestView] = useState({ tab: 'case', open: true })
+  const [loadingProblem, setLoadingProblem] = useState(false)
+  const loadingRef = useRef(null)
+  const appliedRef = useRef(null)
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  const fetchProblem = async (id) => {
+    if (loadingRef.current === id) return null
+    loadingRef.current = id
+    try {
+      return await getProblem(id)
+    } finally {
+      loadingRef.current = null
+    }
+  }
+
+  const applyProblem = (next) => {
+    appliedRef.current = next.id
+    setProblem(next)
+    setCases(next.samples.map((s) => ({ input: s.input, expected: s.output })))
+    setCaseIndex(0)
+    runner.clear()
+  }
+
+  const onSharedProblem = (id) => {
+    if (!id || id === appliedRef.current) return
+    fetchProblem(id)
+      .then((next) => next && applyProblem(next))
+      .catch(() => {})
+  }
 
   const {
     attachEditor,
     getCode,
     setCode,
     applyLanguage,
+    setProblemId,
     startRun,
     status,
     members,
     language: sharedLanguage,
     run,
     socket,
-  } = useCollabRoom({ roomId, user, enabled: isCollab })
+  } = useCollabRoom({ roomId, user, enabled: isCollab, onProblemChange: onSharedProblem })
 
   // In a room the language is part of the shared document, so everyone's editor
   // highlights the same way. 'cpp' covers the moment before the first sync.
@@ -208,16 +244,17 @@ const CodeEditor = ({ roomId }) => {
   useEffect(() => {
     if (!isCollab) return
     let active = true
-    joinRoom(roomId)
-      .catch((err) => {
-        if (!active) return
-        if (err.response?.status === 401) {
-          toast.error('Please log in to open a room', { theme: 'dark' })
-          navigate('/login')
-        } else {
-          toast.error(err.response?.data?.error || 'Could not open room', { theme: 'dark' })
-        }
-      })
+    joinRoom(roomId).catch((err) => {
+      if (!active) return
+      if (err.response?.status === 401) {
+        toast.error('Please log in to open a room', { theme: 'dark' })
+        navigate('/login')
+      } else {
+        toast.error(err.response?.data?.error || 'Could not open room', {
+          theme: 'dark',
+        })
+      }
+    })
     return () => {
       active = false
     }
@@ -247,48 +284,143 @@ const CodeEditor = ({ roomId }) => {
     }
   }, [isCollab, run, members, startRun])
 
+  const runner = useRun({ editorRef, language, sharedRun })
+  const { split, containerRef, startDrag } = useSplit()
+
+  const passedAll = useMemo(() => allAccepted(cases, runner.results), [cases, runner.results])
+  useEffect(() => {
+    if (!passedAll || !problem) return
+    toast.success(
+      <span>
+        All sample tests passed.{' '}
+        <a href={problem.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
+          Go and submit the question on the official Codeforces website
+        </a>
+      </span>,
+      { theme: 'dark', autoClose: 10000 },
+    )
+  }, [passedAll, problem])
+
+  const onLoadProblem = async (id) => {
+    if (!id.trim()) return
+    try {
+      setLoadingProblem(true)
+      const next = await fetchProblem(id)
+      if (!next) return
+      applyProblem(next)
+      if (isCollab) setProblemId(next.id)
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 401) toast.error('Please log in to load problems', { theme: 'dark' })
+      else toast.error(err.response?.data?.error || 'Could not load the problem', { theme: 'dark' })
+    } finally {
+      setLoadingProblem(false)
+    }
+  }
+
+  const setInput = (text) =>
+    setCases((prev) => prev.map((c, i) => (i === caseIndex ? { ...c, input: text } : c)))
+
+  const addCase = () => {
+    setCases((prev) => [...prev, { input: '', expected: null }])
+    setCaseIndex(cases.length)
+  }
+
+  const onRun = () => {
+    setTestView({ tab: 'result', open: true })
+    runner.run(cases.map((c) => c.input))
+  }
+
   const onSave = async () => {
     try {
       setSaving(true)
       await saveRoom(roomId, { code: readCode(), language })
       toast.success('Saved', { theme: 'dark' })
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Save failed', { theme: 'dark' })
+      toast.error(err.response?.data?.error || 'Save failed', {
+        theme: 'dark',
+      })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Box maxW="1400px" mx="auto">
-      {isCollab ? (
-        <RoomTopBar
-          roomId={roomId}
-          users={users}
-          micStatus={micStatus}
-          voiceOn={voiceOn}
-          voicePeers={voice.peers}
-          muted={micMuted}
-          onToggleVoice={toggleVoice}
-          onToggleMute={() => setMicMuted((m) => !m)}
-          onSave={onSave}
-          saving={saving}
-        />
-      ) : (
-        <EditorTopBar roomId={roomId} onSave={onSave} saving={saving} />
-      )}
+    <Box
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      h={{ base: 'auto', lg: 'calc(100vh - 24px)' }}
+    >
+      <EditorBar
+        roomId={roomId}
+        language={language}
+        onSelectLanguage={onSelect}
+        problemId={problem?.id}
+        onLoadProblem={onLoadProblem}
+        loadingProblem={loadingProblem}
+        onRun={onRun}
+        running={runner.isLoading}
+        runLabel={
+          sharedRun?.busy && !sharedRun.isSelf ? `${sharedRun.runnerName} is running…` : undefined
+        }
+        room={
+          isCollab
+            ? {
+                onSave,
+                saving,
+                presence: {
+                  users,
+                  micStatus,
+                  voiceOn,
+                  voicePeers: voice.peers,
+                  muted: micMuted,
+                  onToggleVoice: toggleVoice,
+                  onToggleMute: () => setMicMuted((m) => !m),
+                },
+              }
+            : null
+        }
+      />
 
-      <Stack direction={{ base: 'column', md: 'row' }} gap={5} align="stretch">
-        <Box w={{ base: '100%', md: '50%' }}>
-          <LanguageSelector language={language} onSelect={onSelect} />
+      <Box
+        ref={containerRef}
+        display="flex"
+        flexDirection={{ base: 'column', lg: 'row' }}
+        gap={{ base: 3, lg: 0 }}
+        flex="1"
+        minH={0}
+      >
+        <Box w={{ base: '100%', lg: `${split}%` }} h={{ base: '45vh', lg: 'auto' }} minH={0} flexShrink={0}>
+          <ProblemPanel problem={problem} />
+        </Box>
+
+        <Box
+          onPointerDown={startDrag}
+          display={{ base: 'none', lg: 'flex' }}
+          w="12px"
+          flexShrink={0}
+          alignItems="center"
+          justifyContent="center"
+          cursor="col-resize"
+          role="separator"
+          _hover={{ '& > div': { bg: '#3b82f6' } }}
+        >
+          <Box w="2px" h="40px" borderRadius="full" bg="#2a2a30" />
+        </Box>
+
+        <Box display="flex" flexDirection="column" gap={3} minH={0} minW={0} flex="1">
           <Box
             border="1px solid"
             borderColor="#1e1e22"
             borderRadius={12}
             overflow="hidden"
             bg="#0b0b0e"
+            display="flex"
+            flexDirection="column"
+            flex="1"
+            minH={{ base: '50vh', lg: 0 }}
           >
-            {/* Editor header strip: file name + a hint that this pane is shared. */}
             <Box
               display="flex"
               alignItems="center"
@@ -313,7 +445,6 @@ const CodeEditor = ({ roomId }) => {
                 </Box>
               </Box>
               <Box display="flex" alignItems="center" gap={3}>
-                {/* Reset the editor to the current language's starter template. */}
                 <Box
                   as="button"
                   type="button"
@@ -334,7 +465,7 @@ const CodeEditor = ({ roomId }) => {
                 )}
               </Box>
             </Box>
-            <Box height={{ base: '48vh', md: '68vh' }}>
+            <Box flex="1" minH={0}>
               <Editor
                 height="100%"
                 theme="vs-dark"
@@ -355,9 +486,20 @@ const CodeEditor = ({ roomId }) => {
               />
             </Box>
           </Box>
+
+          <TestPanel
+            cases={cases}
+            caseIndex={caseIndex}
+            onCaseChange={setCaseIndex}
+            onInputChange={setInput}
+            onAddCase={addCase}
+            results={runner.results}
+            isLoading={runner.isLoading}
+            view={testView}
+            onViewChange={setTestView}
+          />
         </Box>
-        <Output editorRef={editorRef} language={language} sharedRun={sharedRun} />
-      </Stack>
+      </Box>
 
       {/* One hidden player per peer - this is what makes the call audible. */}
       {Object.entries(voice.streams).map(([socketId, stream]) => (

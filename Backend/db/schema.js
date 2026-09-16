@@ -23,4 +23,21 @@ const RoomsTable =
     FOREIGN KEY (user2) REFERENCES users(id)
   )`;
 
-module.exports = { UserTable, RoomsTable };
+const ProblemsTable =
+  `CREATE TABLE IF NOT EXISTS problems(
+    id VARCHAR(10) PRIMARY KEY,
+    contest_id INT NOT NULL,
+    idx VARCHAR(3) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    time_limit VARCHAR(50) NULL,
+    memory_limit VARCHAR(50) NULL,
+    legend MEDIUMTEXT NULL,
+    input_spec MEDIUMTEXT NULL,
+    output_spec MEDIUMTEXT NULL,
+    note MEDIUMTEXT NULL,
+    samples JSON NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`;
+
+module.exports = { UserTable, RoomsTable, ProblemsTable };

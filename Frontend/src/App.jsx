@@ -13,8 +13,7 @@ function EditorShell({ children }) {
       minH="100vh"
       bg="#000"
       color="#e6e6ea"
-      px={{ base: 4, md: 6 }}
-      py={{ base: 4, md: 6 }}
+      p={3}
     >
       {children}
     </Box>

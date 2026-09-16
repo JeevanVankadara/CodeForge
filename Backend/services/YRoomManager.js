@@ -3,7 +3,7 @@
 // While at least one person is connected, a room lives here as an in-memory
 // Y.Doc holding three things:
 //   ytext ('monaco')  - the shared code
-//   ymeta ('meta')    - shared settings, currently just the language
+//   ymeta ('meta')    - shared settings: the language and the loaded problem id
 //   awareness         - who is present and where their cursor is
 //
 // MySQL is written from here and nowhere else: every 15 seconds for rooms that
@@ -30,11 +30,11 @@ const STATE_MAX_BYTES = 15 * 1024 * 1024;
 // A run whose finally-block never fired (process killed mid-run) must not block
 // the room forever, so a lock older than this is treated as stale.
 //
-// It has to comfortably exceed RUN_WAIT_MS (the queue-wait ceiling) plus the
-// container timeout. A run that sits in a busy queue for nearly a minute and
-// then executes is perfectly healthy, and must not have its lock stolen by
-// another member while it is still going.
-const RUN_LOCK_TTL_MS = 2 * 60 * 1000;
+// It has to comfortably exceed RUN_WAIT_MS (the queue-wait ceiling, 150s by
+// default). A run that sits in a busy queue and then executes is perfectly
+// healthy, and must not have its lock stolen by another member while it is
+// still going.
+const RUN_LOCK_TTL_MS = 4 * 60 * 1000;
 
 //Building the Y.doc from whatever Mysql has
 const hydrate = async(roomId) => {

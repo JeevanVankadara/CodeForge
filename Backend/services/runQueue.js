@@ -21,11 +21,12 @@ const QUEUE_NAME = 'run';
 // sit in Redis (i.e. in RAM) until the job is evicted.
 const MAX_CODE_BYTES = 256 * 1024;
 const MAX_INPUT_BYTES = 64 * 1024;
+const MAX_INPUTS = 10;
 
 // Ceiling on the *total* wait: queue time plus container time. Distinct from the
 // container's own limit in executors/docker.js, which bounds how long the user's program
 // may run. This one bounds how long a human stares at a spinner.
-const RUN_WAIT_MS = Number(process.env.RUN_WAIT_MS || 60000);
+const RUN_WAIT_MS = Number(process.env.RUN_WAIT_MS || 150000);
 
 const queue = new Queue(QUEUE_NAME, {
   connection: createRedis(),
@@ -55,7 +56,7 @@ queueEvents.on('error', (err) => {
 
 // Resolves to { job, position } where position is how many runs are already
 // waiting ahead of this one - 0 means it should start immediately.
-const enqueueRun = async ({ language, code, input = '', roomId = null, userId = null }) => {
+const enqueueRun = async ({ language, code, inputs = [''], roomId = null, userId = null }) => {
   // Checked here rather than in the worker: an unsupported language is a bad
   // request, and it should be rejected in the caller's face instead of taking up
   // a queue slot and failing two attempts later.
@@ -68,11 +69,17 @@ const enqueueRun = async ({ language, code, input = '', roomId = null, userId = 
   if (Buffer.byteLength(code) > MAX_CODE_BYTES) {
     throw new Error('That file is too large to run');
   }
-  if (Buffer.byteLength(String(input)) > MAX_INPUT_BYTES) {
+  if (!Array.isArray(inputs) || inputs.length === 0 || inputs.length > MAX_INPUTS) {
+    throw new Error(`Give between 1 and ${MAX_INPUTS} inputs`);
+  }
+  if (!inputs.every((input) => typeof input === 'string')) {
+    throw new Error('Every input must be text');
+  }
+  if (inputs.reduce((total, input) => total + Buffer.byteLength(input), 0) > MAX_INPUT_BYTES) {
     throw new Error('That input is too large');
   }
 
-  const job = await queue.add('run', { language, code, input, roomId, userId });
+  const job = await queue.add('run', { language, code, inputs, roomId, userId });
 
   // Best-effort: a queue depth reading is for the UI, never worth failing on.
   let position = 0;

@@ -36,7 +36,7 @@ const IDLE_RUN = { busy: false, by: null, name: null, result: null }
 const CURSOR_IDLE_MS = 2000
 const CURSOR_TICK_MS = 500
 
-export function useCollabRoom({ roomId, user, enabled }) {
+export function useCollabRoom({ roomId, user, enabled, onProblemChange }) {
   const [status, setStatus] = useState('idle')
   const [members, setMembers] = useState([])
   const [language, setLanguage] = useState(null)
@@ -51,6 +51,11 @@ export function useCollabRoom({ roomId, user, enabled }) {
   const textRef = useRef(null)
   const metaRef = useRef(null)
   const socketRef = useRef(null)
+  const onProblemChangeRef = useRef(onProblemChange)
+
+  useEffect(() => {
+    onProblemChangeRef.current = onProblemChange
+  })
 
   // Monaco can mount before or after the socket connects, so whoever is second
   // triggers the binding.
@@ -91,14 +96,18 @@ export function useCollabRoom({ roomId, user, enabled }) {
     return true
   }, [])
 
+  const setProblemId = useCallback((id) => {
+    metaRef.current?.set('problem', id)
+  }, [])
+
   // Asks the server to run the room's code. The server uses its own copy of the
   // document, so what runs is exactly what everyone can see.
   const startRun = useCallback(
-    (input) =>
+    (inputs) =>
       new Promise((resolve) => {
         const socket = socketRef.current
         if (!socket) return resolve({ ok: false, error: 'Not connected to the room' })
-        socket.emit('run:start', { input }, (res) => resolve(res || { ok: false, error: 'No response' }))
+        socket.emit('run:start', { inputs }, (res) => resolve(res || { ok: false, error: 'No response' }))
       }),
     [],
   )
@@ -260,7 +269,9 @@ export function useCollabRoom({ roomId, user, enabled }) {
     const cursorTimer = setInterval(paintCursors, CURSOR_TICK_MS)
 
     const readMeta = () => {
-      if (active) setLanguage(meta.get('language') || null)
+      if (!active) return
+      setLanguage(meta.get('language') || null)
+      onProblemChangeRef.current?.(meta.get('problem') || null)
     }
 
     const onLocalAwareness = ({ added, updated, removed }, origin) => {
@@ -391,6 +402,7 @@ export function useCollabRoom({ roomId, user, enabled }) {
     getCode,
     setCode,
     applyLanguage,
+    setProblemId,
     startRun,
     status,
     members,

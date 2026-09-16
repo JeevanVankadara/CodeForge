@@ -16,7 +16,7 @@ const { getRoom, acquireRunLock, releaseRunLock } = require('../services/YRoomMa
 const registerRunHandlers = (io, socket) => {
   const user = socket.data.user;
 
-  socket.on('run:start', async ({ input = '' } = {}, ack) => {
+  socket.on('run:start', async ({ inputs = [''] } = {}, ack) => {
     const roomId = socket.data.roomId;
     if (!roomId) return ack?.({ ok: false, error: 'Join a room first' });
 
@@ -46,7 +46,7 @@ const registerRunHandlers = (io, socket) => {
       ({ job, position } = await enqueueRun({
         language,
         code,
-        input,
+        inputs,
         roomId,
         userId: user.id,
       }));
@@ -68,22 +68,15 @@ const registerRunHandlers = (io, socket) => {
     });
 
     try {
-      const result = await waitForRun(job);
+      const results = await waitForRun(job);
 
-      io.to(roomId).emit('run:output', {
-        by: user.id,
-        name: user.email,
-        stdout: result.stdout || '',
-        stderr: result.stderr || '',
-        exitCode: result.exitCode,
-      });
+      io.to(roomId).emit('run:output', { by: user.id, name: user.email, results });
     } catch (err) {
+      const failed = { stdout: '', stderr: err.message || 'Run failed', exitCode: -1 };
       io.to(roomId).emit('run:output', {
         by: user.id,
         name: user.email,
-        stdout: '',
-        stderr: err.message || 'Run failed',
-        exitCode: -1,
+        results: inputs.map(() => failed),
       });
     } finally {
       // Freeing the lock matters more than the broadcast: without it the room
