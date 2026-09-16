@@ -101,8 +101,8 @@ export default function HomePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Feature icon={Users} title="Real-time Collaboration" desc="Multi-cursor editing with sub-100ms sync." />
-            <Feature icon={Cpu} title="Multi-language Compiler" desc="14 runtimes, pinned versions, sandboxed." />
-            <Feature icon={Zap} title="Fast Execution" desc="Cold-start under 400ms on every runtime." />
+            <Feature icon={Cpu} title="C++, Java & Python" desc="Three runtimes, pinned versions, sandboxed." />
+            <Feature icon={Zap} title="Fast Execution" desc="Runs are queued and isolated, so one heavy job never blocks the rest." />
           </div>
         </div>
       </main>

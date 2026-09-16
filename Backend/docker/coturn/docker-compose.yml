@@ -1,5 +1,5 @@
 # A long-running service, unlike the language sandboxes next door - those are
-# built and thrown away per execution by dockerode; this one stays up.
+# started and thrown away per run by the worker; this one stays up.
 #
 #   cd Backend/docker/coturn
 #   docker compose --env-file ../../.env up -d

@@ -21,7 +21,7 @@ import { colorFor } from '../lib/userColor.js'
 import '../lib/monacoSetup.js'
 
 // File extension shown in the editor header strip.
-const EXT = { cpp: 'cpp', javascript: 'js', python: 'py', java: 'java' }
+const EXT = { cpp: 'cpp', java: 'java', python: 'py' }
 
 const STATUS_HINT = {
   idle: 'offline',

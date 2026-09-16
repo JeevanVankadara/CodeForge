@@ -12,6 +12,10 @@ class BaseLanguage {
     throw new Error('fileName not defined');
   }
 
+  get jdoodle(){
+    throw new Error('jdoodle not defined');
+  }
+
   getRunCommand(){
     throw new Error('getRunCommand not defined');
   }

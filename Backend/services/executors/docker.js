@@ -1,6 +1,8 @@
 // the only file that talks with the docker container
 const path = require("path");
+const fs = require("fs/promises");
 const { spawn } = require("child_process");
+const { randomUUID } = require("crypto");
 
 // How long the user's *program* may run. This is a product decision about
 // infinite loops, and is not the same clock as RUN_WAIT_MS in runQueue.js, which
@@ -110,6 +112,15 @@ function runInContainer(runner, jobDir, input = "") {
   });
 }
 
-module.exports = runInContainer;
-module.exports.TIMEOUT_MS = TIMEOUT_MS;
-module.exports.MAX_OUTPUT_BYTES = MAX_OUTPUT_BYTES;
+const run = async (runner, code, input) => {
+  const jobDir = path.join(__dirname, "../../temp", randomUUID());
+  try {
+    await fs.mkdir(jobDir, { recursive: true });
+    await fs.writeFile(path.join(jobDir, runner.fileName), code);
+    return await runInContainer(runner, jobDir, input);
+  } finally {
+    await fs.rm(jobDir, { recursive: true, force: true });
+  }
+};
+
+module.exports = { run, TIMEOUT_MS, MAX_OUTPUT_BYTES };

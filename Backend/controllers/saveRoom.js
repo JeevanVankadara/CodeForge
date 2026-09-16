@@ -8,6 +8,7 @@
 
 const pool = require('../config/db');
 const { persistRoomById } = require('../services/YRoomManager');
+const { supportedLanguages } = require('../services/LanguageFactory');
 
 const saveRoom = async (req, res) => {
   const userId = Number(req.user.id);
@@ -16,6 +17,9 @@ const saveRoom = async (req, res) => {
 
   if (typeof code !== 'string') {
     return res.status(400).json({ error: 'Invalid code' });
+  }
+  if (language && !supportedLanguages.includes(language)) {
+    return res.status(400).json({ error: `Language ${language} is not supported` });
   }
 
   try {

@@ -55,7 +55,7 @@ worker.on('error', (err) => {
   console.error('Worker error:', err.message);
 });
 
-console.log(`Run worker ready - queue "${QUEUE_NAME}", concurrency ${CONCURRENCY}`);
+console.log(`Run worker ready - queue "${QUEUE_NAME}", executor ${executeCode.executor}, concurrency ${CONCURRENCY}`);
 
 // Let in-flight containers finish rather than orphaning them on Ctrl+C.
 let shuttingDown = false;

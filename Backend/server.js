@@ -12,6 +12,7 @@ const { UserTable, RoomsTable } = require('./db/schema');
 const registerSocketHandlers = require('./socket');
 const { startAutosave, stopAutosave, flushAll } = require('./services/YRoomManager');
 const { closeQueue } = require('./services/runQueue');
+const { supportedLanguages } = require('./services/LanguageFactory');
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
@@ -83,6 +84,11 @@ async function initDb() {
   // real session outgrows that quickly and the save would fail. MEDIUM* is 16MB.
   await ensureColumnType('rooms', 'ydoc_state', 'mediumblob', 'MEDIUMBLOB NULL');
   await ensureColumnType('rooms', 'code', 'mediumtext', 'MEDIUMTEXT NULL');
+
+  await pool.promise().query(
+    'UPDATE rooms SET language = ? WHERE language NOT IN (?)',
+    ['cpp', supportedLanguages]
+  );
 
   console.log('Database tables are ready');
 }

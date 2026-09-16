@@ -23,7 +23,7 @@ const MAX_CODE_BYTES = 256 * 1024;
 const MAX_INPUT_BYTES = 64 * 1024;
 
 // Ceiling on the *total* wait: queue time plus container time. Distinct from the
-// container's own limit in CodeRunner, which bounds how long the user's program
+// container's own limit in executors/docker.js, which bounds how long the user's program
 // may run. This one bounds how long a human stares at a spinner.
 const RUN_WAIT_MS = Number(process.env.RUN_WAIT_MS || 60000);
 
@@ -32,7 +32,7 @@ const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     // Retries exist for infrastructure faults only - a dead Docker daemon, a
     // missing image. A program that segfaults is a *successful* job with a
-    // non-zero exit code, and CodeRunner resolves rather than throws for it, so
+    // non-zero exit code, and the executor resolves rather than throws for it, so
     // user code never burns an attempt.
     attempts: 2,
     backoff: { type: 'fixed', delay: 500 },
