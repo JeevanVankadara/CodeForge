@@ -1,3 +1,4 @@
+const https = require('https');
 const cheerio = require('cheerio');
 
 const USER_AGENT = 'CodeForge/1.0 (+https://github.com/JeevanVankadara/CodeForge)';
@@ -70,21 +71,38 @@ const parseProblem = (html, meta) => {
   };
 };
 
-const fetchProblem = async (meta) => {
-  const url = `https://codeforces.com/problemset/problem/${meta.contestId}/${meta.index}`;
-  let res;
-  try {
-    res = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(15000),
+const RETRY_DELAYS_MS = [1000, 2500];
+
+const request = (url) =>
+  new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' }, timeout: 15000 }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => (body += chunk));
+      res.on('end', () => resolve({ status: res.statusCode, body }));
     });
-  } catch (err) {
-    throw new ProblemError(502, `Could not reach Codeforces: ${err.message}`);
+    req.on('timeout', () => req.destroy(new Error('timed out')));
+    req.on('error', reject);
+  });
+
+const fetchPage = async (url) => {
+  for (let attempt = 0; ; attempt++) {
+    let res;
+    try {
+      res = await request(url);
+    } catch (err) {
+      throw new ProblemError(502, `Could not reach Codeforces: ${err.message}`);
+    }
+    if (res.status >= 300 && res.status < 400) throw new ProblemError(404, 'Problem not found');
+    if (res.status === 200) return res.body;
+    if (attempt >= RETRY_DELAYS_MS.length) {
+      throw new ProblemError(502, `Codeforces is refusing requests right now (${res.status}) - try again in a minute`);
+    }
+    await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
   }
-  if (res.status >= 300 && res.status < 400) throw new ProblemError(404, 'Problem not found');
-  if (!res.ok) throw new ProblemError(502, `Codeforces answered with ${res.status}`);
-  return parseProblem(await res.text(), meta);
 };
+
+const fetchProblem = async (meta) =>
+  parseProblem(await fetchPage(`https://codeforces.com/problemset/problem/${meta.contestId}/${meta.index}`), meta);
 
 module.exports = { parseId, parseProblem, fetchProblem, ProblemError };

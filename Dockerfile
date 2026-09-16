@@ -1,3 +1,10 @@
+FROM node:22-alpine AS web
+WORKDIR /web
+COPY Frontend/package*.json ./
+RUN npm ci
+COPY Frontend/ ./
+RUN npm run build
+
 FROM eclipse-temurin:21-jdk-noble
 
 RUN apt-get update \
@@ -8,12 +15,14 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY Backend/package*.json ./
 RUN npm ci --omit=dev
 
-COPY . .
+COPY Backend/ ./
+COPY --from=web /web/dist ./public
 
 ENV NODE_ENV=production
 ENV EXECUTOR=local
+ENV RUN_WORKER=true
 
-CMD ["node", "worker.js"]
+CMD ["node", "server.js"]

@@ -6,13 +6,12 @@
 //   ymeta ('meta')    - shared settings: the language and the loaded problem id
 //   awareness         - who is present and where their cursor is
 //
-// MySQL is written from here and nowhere else: every 15 seconds for rooms that
+// Postgres is written from here and nowhere else: every 15 seconds for rooms that
 // changed, and once more when the last person leaves.
 
 const Y = require('yjs');
 const { Awareness, removeAwarenessStates } = require('y-protocols/awareness');
-const pool = require('../config/db');
-const db = pool.promise();
+const db = require('../config/db');
 
 const rooms = new Map(); //Mapping of roomId to Y.Doc instances
 
@@ -21,7 +20,7 @@ const META_KEY = 'meta';
 
 const AUTOSAVE_MS = 15000;
 
-// ydoc_state is a MEDIUMBLOB (16MB ceiling). We warn well before that and refuse
+// ydoc_state is a BYTEA. We warn well before 16MB and refuse
 // to attempt the write past the hard limit, so a huge document degrades to
 // "text saved, snapshot skipped" instead of a failed UPDATE that saves nothing.
 const STATE_WARN_BYTES = 4 * 1024 * 1024;
@@ -36,9 +35,9 @@ const STATE_MAX_BYTES = 15 * 1024 * 1024;
 // still going.
 const RUN_LOCK_TTL_MS = 4 * 60 * 1000;
 
-//Building the Y.doc from whatever Mysql has
+//Building the Y.doc from whatever Postgres has
 const hydrate = async(roomId) => {
-  const [rows] = await db.query('SELECT code, language, ydoc_state FROM rooms WHERE id = ?', [roomId]);
+  const { rows } = await db.query('SELECT code, language, ydoc_state FROM rooms WHERE id = $1', [roomId]);
   if (rows.length === 0) {
     throw new Error(`Room with id ${roomId} does not exist`);
   }
@@ -110,12 +109,12 @@ const persistRoom = async (state) => {
   if (blob.length > STATE_MAX_BYTES) {
     console.error(`Room ${state.roomId} snapshot too large, saving text only`);
     await db.query(
-      'UPDATE rooms SET code = ?, language = ? WHERE id = ?',
+      'UPDATE rooms SET code = $1, language = $2, updated_at = NOW() WHERE id = $3',
       [code, language, state.roomId]
     );
   } else {
     await db.query(
-      'UPDATE rooms SET code = ?, language = ?, ydoc_state = ? WHERE id = ?',
+      'UPDATE rooms SET code = $1, language = $2, ydoc_state = $3, updated_at = NOW() WHERE id = $4',
       [code, language, blob, state.roomId]
     );
   }

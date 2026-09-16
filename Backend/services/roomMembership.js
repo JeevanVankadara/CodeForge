@@ -1,9 +1,8 @@
-const pool = require('../config/db.js');
-const db = pool.promise();
+const db = require('../config/db.js');
 
 const findRoom = async(roomId) => {
-  const [rows] = await db.query(
-    `SELECT id, user_created, user1, user2, language, code FROM rooms WHERE id = ?`,
+  const { rows } = await db.query(
+    `SELECT id, user_created, user1, user2, language, code FROM rooms WHERE id = $1`,
     [roomId]
   );
   return rows[0] || null;
@@ -22,11 +21,11 @@ const isMember = (room, userId) => seatOf(room, userId) !== null;
 const createRoom = async (roomId, userId) => {
   try {
     await db.query(
-      `INSERT INTO rooms (id, user_created, language, code) VALUES (?, ?, 'cpp', '')`,
+      `INSERT INTO rooms (id, user_created, language, code) VALUES ($1, $2, 'cpp', '')`,
       [roomId, userId]
     );
   } catch (err) {
-    if (err.code !== 'ER_DUP_ENTRY') throw err;
+    if (err.code !== '23505') throw err;
   }
   return findRoom(roomId);
 };
@@ -39,11 +38,11 @@ const claimSeat = async (roomId, userId) => {
   if (existing) return { ok: true, seat: existing, room };
 
   for (const slot of ['user1', 'user2']) {
-    const [result] = await db.query(
-      `UPDATE rooms SET ${slot} = ? WHERE id = ? AND ${slot} IS NULL`,
+    const { rowCount } = await db.query(
+      `UPDATE rooms SET ${slot} = $1 WHERE id = $2 AND ${slot} IS NULL`,
       [userId, roomId]
     );
-    if (result.affectedRows === 1) {
+    if (rowCount === 1) {
       return { ok: true, seat: slot, room: { ...room, [slot]: userId } };
     }
   }
@@ -53,11 +52,11 @@ const claimSeat = async (roomId, userId) => {
 
 const releaseSeat = async (roomId, userId) => {
   for (const slot of ['user1', 'user2']) {
-    const [result] = await db.query(
-      `UPDATE rooms SET ${slot} = NULL WHERE id = ? AND ${slot} = ?`,
+    const { rowCount } = await db.query(
+      `UPDATE rooms SET ${slot} = NULL WHERE id = $1 AND ${slot} = $2`,
       [roomId, userId]
     );
-    if (result.affectedRows === 1) return slot;
+    if (rowCount === 1) return slot;
   }
   return null;
 };

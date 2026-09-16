@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 const { parseId, fetchProblem, ProblemError } = require('../services/codeforces');
 
-const db = pool.promise();
+const db = pool;
 
 const fromRow = (row) => ({
   id: row.id,
@@ -27,14 +27,14 @@ const getProblem = async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query('SELECT * FROM problems WHERE id = ?', [meta.id]);
+    const { rows } = await db.query('SELECT * FROM problems WHERE id = $1', [meta.id]);
     if (rows.length) return res.status(200).json(fromRow(rows[0]));
 
     const problem = await fetchProblem(meta);
     await db.query(
       `INSERT INTO problems
         (id, contest_id, idx, title, time_limit, memory_limit, legend, input_spec, output_spec, note, samples, url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         problem.id, problem.contestId, problem.index, problem.title, problem.timeLimit, problem.memoryLimit,
         problem.legend, problem.inputSpec, problem.outputSpec, problem.note, JSON.stringify(problem.samples), problem.url,

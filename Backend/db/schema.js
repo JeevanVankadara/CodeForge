@@ -1,26 +1,23 @@
-const UserTable = 
+const UserTable =
   `CREATE TABLE IF NOT EXISTS users(
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT NOW()
   )`;
 
 const RoomsTable =
   `CREATE TABLE IF NOT EXISTS rooms(
     id VARCHAR(21) PRIMARY KEY,
-    user_created INT NOT NULL,
-    user1 INT NULL,
-    user2 INT NULL,
+    user_created INT NOT NULL REFERENCES users(id),
+    user1 INT NULL REFERENCES users(id),
+    user2 INT NULL REFERENCES users(id),
     language VARCHAR(20) NOT NULL DEFAULT 'cpp',
-    code MEDIUMTEXT NULL,
-    ydoc_state MEDIUMBLOB NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_created) REFERENCES users(id),
-    FOREIGN KEY (user1) REFERENCES users(id),
-    FOREIGN KEY (user2) REFERENCES users(id)
+    code TEXT NULL,
+    ydoc_state BYTEA NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
   )`;
 
 const ProblemsTable =
@@ -31,13 +28,13 @@ const ProblemsTable =
     title VARCHAR(255) NOT NULL,
     time_limit VARCHAR(50) NULL,
     memory_limit VARCHAR(50) NULL,
-    legend MEDIUMTEXT NULL,
-    input_spec MEDIUMTEXT NULL,
-    output_spec MEDIUMTEXT NULL,
-    note MEDIUMTEXT NULL,
-    samples JSON NOT NULL,
+    legend TEXT NULL,
+    input_spec TEXT NULL,
+    output_spec TEXT NULL,
+    note TEXT NULL,
+    samples JSONB NOT NULL,
     url VARCHAR(255) NOT NULL,
-    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    fetched_at TIMESTAMPTZ DEFAULT NOW()
   )`;
 
 module.exports = { UserTable, RoomsTable, ProblemsTable };

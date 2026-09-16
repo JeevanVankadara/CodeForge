@@ -4,7 +4,7 @@
 #
 # Nothing here is durable on purpose. The queue only ever holds in-flight runs,
 # so if this container restarts the worst case is that a few queued runs are
-# lost and the user presses Run again. Everything worth keeping lives in MySQL.
+# lost and the user presses Run again. Everything worth keeping lives in Postgres.
 
 services:
   redis:

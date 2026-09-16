@@ -2,7 +2,7 @@
 //
 // Run it alongside the API:  npm run worker
 //
-// It is deliberately stateless - no MySQL, no Y.Doc, no sockets. Everything it
+// It is deliberately stateless - no Postgres, no Y.Doc, no sockets. Everything it
 // needs arrives in the job payload, which is what makes it safe to run several
 // of these, or to move them to another machine, without touching the API.
 //
@@ -22,57 +22,65 @@ const executeCode = require('./services/executeCode');
 // 4 containers x 256m is 1GB of headroom. Lower it if your laptop complains.
 const CONCURRENCY = Number(process.env.RUN_CONCURRENCY || 4);
 
-const worker = new Worker(
-  QUEUE_NAME,
-  async (job) => {
-    const { language, code, inputs = [''] } = job.data;
-    const started = Date.now();
+const startWorker = () => {
+  const worker = new Worker(
+    QUEUE_NAME,
+    async (job) => {
+      const { language, code, inputs = [''] } = job.data;
+      const started = Date.now();
 
-    // Anything executeCode throws is an infrastructure fault and marks the job
-    // failed, which is what makes the retry in defaultJobOptions meaningful. A
-    // program that crashes or times out comes back as a normal resolved result.
-    const results = await executeCode({ language, code, inputs });
+      // Anything executeCode throws is an infrastructure fault and marks the job
+      // failed, which is what makes the retry in defaultJobOptions meaningful. A
+      // program that crashes or times out comes back as a normal resolved result.
+      const results = await executeCode({ language, code, inputs });
 
-    console.log(
-      `job ${job.id} ${language} exit=${results.map((r) => r.exitCode).join(',')} in ${Date.now() - started}ms`
-    );
-    return results;
-  },
-  {
-    connection: createRedis(),
-    concurrency: CONCURRENCY,
-    // A job whose worker was killed mid-container must not stay "active"
-    // forever; after this it is returned to the queue.
-    lockDuration: 60000,
-  }
-);
+      console.log(
+        `job ${job.id} ${language} exit=${results.map((r) => r.exitCode).join(',')} in ${Date.now() - started}ms`
+      );
+      return results;
+    },
+    {
+      connection: createRedis(),
+      concurrency: CONCURRENCY,
+      // A job whose worker was killed mid-container must not stay "active"
+      // forever; after this it is returned to the queue.
+      lockDuration: 60000,
+    }
+  );
 
-worker.on('failed', (job, err) => {
-  console.error(`job ${job?.id} failed:`, err.message);
-});
+  worker.on('failed', (job, err) => {
+    console.error(`job ${job?.id} failed:`, err.message);
+  });
 
-worker.on('error', (err) => {
-  console.error('Worker error:', err.message);
-});
+  worker.on('error', (err) => {
+    console.error('Worker error:', err.message);
+  });
 
-console.log(`Run worker ready - queue "${QUEUE_NAME}", executor ${executeCode.executor}, concurrency ${CONCURRENCY}`);
+  console.log(`Run worker ready - queue "${QUEUE_NAME}", executor ${executeCode.executor}, concurrency ${CONCURRENCY}`);
 
-// Let in-flight containers finish rather than orphaning them on Ctrl+C.
-let shuttingDown = false;
-
-const shutdown = async (signal) => {
-  if (shuttingDown) return;
-  shuttingDown = true;
-
-  console.log(`\n${signal} received - finishing active runs...`);
-  try {
-    await worker.close();
-    console.log('Worker stopped');
-  } catch (err) {
-    console.error('Worker shutdown failed:', err.message);
-  }
-  process.exit(0);
+  return worker;
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+module.exports = { startWorker };
+
+if (require.main === module) {
+  const worker = startWorker();
+  let shuttingDown = false;
+
+  const shutdown = async (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    console.log(`\n${signal} received - finishing active runs...`);
+    try {
+      await worker.close();
+      console.log('Worker stopped');
+    } catch (err) {
+      console.error('Worker shutdown failed:', err.message);
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+}

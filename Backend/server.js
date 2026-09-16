@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -12,6 +14,7 @@ const { UserTable, RoomsTable, ProblemsTable } = require('./db/schema');
 const registerSocketHandlers = require('./socket');
 const { startAutosave, stopAutosave, flushAll } = require('./services/YRoomManager');
 const { closeQueue } = require('./services/runQueue');
+const { startWorker } = require('./worker');
 const { supportedLanguages } = require('./services/LanguageFactory');
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -36,6 +39,12 @@ app.use('/run', require('./routes/runRoutes'));
 app.use('/rtc', require('./routes/rtcRoutes'));
 app.use('/problems', require('./routes/problemsRoutes'));
 
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  app.get('/{*splat}', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+}
+
 const port = process.env.PORT || 3000;
 
 const httpServer = http.createServer(app);
@@ -46,52 +55,13 @@ const io = new Server(httpServer, {
 
 registerSocketHandlers(io);
 
-async function ensureColumn(table, column, definition) {
-  const [rows] = await pool.promise().query(
-    `SELECT COUNT(*) AS c FROM information_schema.columns
-     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
-    [table, column]
-  );
-  if (rows[0].c === 0) {
-    await pool.promise().query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    console.log(`Migration: added column ${table}.${column}`);
-  }
-}
-
-// Widens an existing column when its type is no longer big enough.
-// (ensureColumn only ever ADDs, so it can't fix a column that already exists.)
-async function ensureColumnType(table, column, expectedType, definition) {
-  const [rows] = await pool.promise().query(
-    `SELECT data_type AS t FROM information_schema.columns
-     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
-    [table, column]
-  );
-  if (rows.length && String(rows[0].t).toLowerCase() !== expectedType) {
-    await pool.promise().query(`ALTER TABLE ${table} MODIFY ${column} ${definition}`);
-    console.log(`Migration: widened ${table}.${column} to ${expectedType}`);
-  }
-}
+const worker = process.env.RUN_WORKER === 'true' ? startWorker() : null;
 
 async function initDb() {
-  await pool.promise().query(UserTable);
-  await pool.promise().query(RoomsTable);
-  await pool.promise().query(ProblemsTable);
-  await ensureColumn('rooms', 'language', "VARCHAR(20) NOT NULL DEFAULT 'cpp'");
-  await ensureColumn('rooms', 'code', "MEDIUMTEXT NULL");
-  await ensureColumn('rooms', 'updated_at',
-    "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-  await ensureColumn('rooms', 'ydoc_state', "MEDIUMBLOB NULL");
-
-  // A plain BLOB/TEXT tops out at 64KB. A Yjs snapshot keeps edit history, so a
-  // real session outgrows that quickly and the save would fail. MEDIUM* is 16MB.
-  await ensureColumnType('rooms', 'ydoc_state', 'mediumblob', 'MEDIUMBLOB NULL');
-  await ensureColumnType('rooms', 'code', 'mediumtext', 'MEDIUMTEXT NULL');
-
-  await pool.promise().query(
-    'UPDATE rooms SET language = ? WHERE language NOT IN (?)',
-    ['cpp', supportedLanguages]
-  );
-
+  await pool.query(UserTable);
+  await pool.query(RoomsTable);
+  await pool.query(ProblemsTable);
+  await pool.query('UPDATE rooms SET language = $1 WHERE NOT (language = ANY($2))', ['cpp', supportedLanguages]);
   console.log('Database tables are ready');
 }
 
@@ -117,6 +87,7 @@ const shutdown = async (signal) => {
     console.error('Shutdown save failed:', err.message);
   }
 
+  if (worker) await worker.close().catch(() => {});
   // Releases the Redis connections so the process can actually exit.
   await closeQueue();
 
@@ -139,6 +110,6 @@ initDb()
     });
   })
   .catch((err) => {
-    console.error('Database setup failed:', err.message);
+    console.error('Database setup failed:', err.message || err.code || err.errors?.[0]?.message || err);
     process.exit(1);
   });

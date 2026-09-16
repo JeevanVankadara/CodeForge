@@ -6,7 +6,7 @@
 // "Self-contained" is the important word: the job carries the *code itself*,
 // snapshotted at the moment Run was pressed. It must not carry only a roomId for
 // the worker to look up, because
-//   1. MySQL trails the live Y.Doc by up to AUTOSAVE_MS, so the worker would run
+//   1. Postgres trails the live Y.Doc by up to AUTOSAVE_MS, so the worker would run
 //      stale code, and
 //   2. collaborators keep typing while a job waits in the queue, so a lookup at
 //      execution time would run a document state nobody ever saw.

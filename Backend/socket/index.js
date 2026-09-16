@@ -75,7 +75,7 @@ const registerSocketHandlers = (io) => {
 
         await socket.join(roomId);
 
-        // Warm the document up now so the client's doc:sync doesn't wait on MySQL.
+        // Warm the document up now so the client's doc:sync doesn't wait on Postgres.
         await getRoom(roomId);
 
         const members = await listMembers(io, roomId);

@@ -23,8 +23,8 @@ const saveRoom = async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.promise().query(
-      'SELECT user_created, user1, user2 FROM rooms WHERE id = ?',
+    const { rows } = await pool.query(
+      'SELECT user_created, user1, user2 FROM rooms WHERE id = $1',
       [roomId]
     );
     if (rows.length === 0) {
@@ -47,13 +47,13 @@ const saveRoom = async (req, res) => {
     }
 
     if (language) {
-      await pool.promise().query(
-        'UPDATE rooms SET code = ?, language = ? WHERE id = ?',
+      await pool.query(
+        'UPDATE rooms SET code = $1, language = $2, updated_at = NOW() WHERE id = $3',
         [code, language, roomId]
       );
     } else {
-      await pool.promise().query(
-        'UPDATE rooms SET code = ? WHERE id = ?',
+      await pool.query(
+        'UPDATE rooms SET code = $1, updated_at = NOW() WHERE id = $2',
         [code, roomId]
       );
     }

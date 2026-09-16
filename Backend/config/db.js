@@ -1,13 +1,18 @@
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+const url = process.env.DATABASE_URL || '';
+const local = /localhost|127\.0\.0\.1|sslmode=disable/.test(url);
+
+const pool = new Pool({
+  connectionString: url,
+  ssl: local ? false : { rejectUnauthorized: false },
+});
+
+pool.on('error', (err) => {
+  console.error('Postgres pool error:', err.message);
 });
 
 module.exports = pool;
